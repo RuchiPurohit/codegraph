@@ -15,6 +15,7 @@
     "build": "tsc -p tsconfig.build.json",
     "check": "tsc --noEmit",
     "example": "node --import tsx examples/basic.ts",
+    "inspect-ast": "node --import tsx examples/inspectAst.ts",
     "test": "node --import tsx --test test/*.test.ts"
   },
   "engines": {
