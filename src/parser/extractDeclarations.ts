@@ -12,6 +12,7 @@ export interface ExtractedDeclaration {
   readonly kind: DeclarationKind;
   readonly name: string;
   readonly qualifiedName: string;
+  readonly parentQualifiedName: string | null;
   readonly location: SourceLocation;
 }
 
@@ -30,6 +31,7 @@ export function extractDeclarations(
     kind: DeclarationKind,
     name: string,
     qualifiedName: string,
+    parentQualifiedName: string | null,
     node: ts.Node,
   ): void {
     const position = sourceFile.getLineAndCharacterOfPosition(
@@ -40,6 +42,7 @@ export function extractDeclarations(
       kind,
       name,
       qualifiedName,
+      parentQualifiedName,
       location: {
         file: sourceFile.fileName,
         line: position.line + 1,
@@ -48,9 +51,19 @@ export function extractDeclarations(
     });
   }
 
-  function visit(node: ts.Node, containerName?: string): void {
+  function qualifyName(parentQualifiedName: string | null, name: string): string {
+    if (parentQualifiedName === null) {
+      return name;
+    }
+
+    return `${parentQualifiedName}.${name}`;
+  }
+
+  function visit(node: ts.Node, parentQualifiedName: string | null): void {
     if (ts.isFunctionDeclaration(node) && node.name !== undefined) {
-      addDeclaration("function", node.name.text, node.name.text, node.name);
+      const name = node.name.text;
+      const qualifiedName = qualifyName(parentQualifiedName, name);
+      addDeclaration("function", node.name.text, qualifiedName, parentQualifiedName, node.name);
     }
 
     if (ts.isClassDeclaration(node)) {
@@ -58,36 +71,44 @@ export function extractDeclarations(
         return;
       }
 
-      addDeclaration("class", node.name.text, node.name.text, node.name);
+      const name = node.name.text;
+      const qualifiedName = qualifyName(parentQualifiedName, name);
+      addDeclaration("function", node.name.text, qualifiedName, parentQualifiedName, node.name);
 
       for (const member of node.members) {
-        visit(member, node.name.text);
+        visit(member, qualifiedName);
       }
 
       return;
     }
 
     if (ts.isInterfaceDeclaration(node)) {
-      addDeclaration("interface", node.name.text, node.name.text, node.name);
+      const name = node.name.text;
+      const qualifiedName = qualifyName(parentQualifiedName, name);
+      addDeclaration("function", node.name.text, qualifiedName, parentQualifiedName, node.name);
 
       for (const member of node.members) {
-        visit(member, node.name.text);
+        visit(member, qualifiedName);
       }
 
       return;
     }
 
+    const isClassMethod = ts.isMethodDeclaration(node) && ts.isClassDeclaration(node.parent);
+    const isInterfaceMethod = ts.isMethodSignature(node) && ts.isInterfaceDeclaration(node.parent);
+
     if (
-      containerName !== undefined &&
-      (ts.isMethodDeclaration(node) || ts.isMethodSignature(node))
+      parentQualifiedName !== null &&
+      (isClassMethod || isInterfaceMethod)
     ) {
       const name = node.name.getText(sourceFile);
-      addDeclaration("method", name, `${containerName}.${name}`, node.name);
+      const qualifiedName = qualifyName(parentQualifiedName, name);
+      addDeclaration("method", name, qualifiedName, parentQualifiedName, node.name);
     }
 
-    ts.forEachChild(node, (child) => visit(child, containerName));
+    ts.forEachChild(node, (child) => visit(child, parentQualifiedName));
   }
 
-  visit(sourceFile);
+  visit(sourceFile, null);
   return declarations;
 }
