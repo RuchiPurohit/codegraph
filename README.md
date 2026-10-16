@@ -31,6 +31,23 @@ npm run codegraph -- impact AuthService.validateToken --root .
 npm run codegraph -- diff --root .
 ```
 
+`index` writes a versioned JSON snapshot to `.codegraph/index.json`. Query
+commands rebuild from source by default; pass `--graph` to explicitly reuse the
+snapshot when startup speed matters:
+
+```bash
+npm run codegraph -- index .
+npm run codegraph -- find AuthService --graph .codegraph/index.json
+npm run codegraph -- impact AuthService.login --graph .codegraph/index.json
+```
+
+Use `--output <file>` to choose another index location. A cached graph can become
+stale after source edits, so rerun `index` before relying on cached results. JSON
+is used because the current workflow writes and loads the whole graph and benefits
+from a portable, inspectable format. SQLite should be reconsidered when incremental
+indexing requires partial updates, database indexes, transactions, or concurrent
+readers.
+
 `deps` and `dependents` follow `CALLS` for symbols and `IMPORTS` for file paths.
 `path` uses BFS and therefore returns a minimum-edge path across `CALLS` and
 `IMPORTS`. `impact` performs reverse BFS with cycle protection.
@@ -49,8 +66,8 @@ npm run codegraph -- diff --root .
 - `codegraph diff` analyzes tracked changes relative to `HEAD`. Untracked files and
   deleted symbols are not recoverable from the current AST, and changed lines outside
   modeled declarations are reported as unmapped.
-- Indexes are rebuilt in memory for each CLI invocation; persistence and incremental
-  indexing are later phases.
+- Query commands rebuild from source unless `--graph` explicitly selects a persisted
+  JSON index. Incremental freshness checking is not implemented yet.
 
 ## The graph model
 

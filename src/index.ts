@@ -44,6 +44,13 @@ export type {
   SourceRange,
 } from "./parser/extractDeclarations.js";
 export { parseSourceFile } from "./parser/parseSourceFile.js";
+export {
+  CODEGRAPH_JSON_SCHEMA_VERSION,
+  deserializeProjectAnalysis,
+  loadProjectAnalysis,
+  saveProjectAnalysis,
+  serializeProjectAnalysis,
+} from "./persistence/jsonPersistence.js";
 export { analyzeImpact } from "./queries/analyzeImpact.js";
 export type {
   ImpactOptions,

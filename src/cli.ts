@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import path from "node:path";
 import { pathToFileURL } from "node:url";
 import {
   analyzeDiffImpact,
@@ -9,15 +10,17 @@ import {
   findSymbols,
   getCodeDependencies,
   getCodeDependents,
+  loadProjectAnalysis,
   readGitDiff,
+  saveProjectAnalysis,
   type CodeGraph,
   type CodeGraphNodeData,
   type GraphNode,
 } from "./index.js";
 
 export async function runCli(arguments_: readonly string[]): Promise<number> {
-  const { argumentsWithoutRoot, rootDirectory } = parseRoot(arguments_);
-  const [command, ...operands] = argumentsWithoutRoot;
+  const options = parseOptions(arguments_);
+  const [command, ...operands] = options.operands;
   if (command === undefined || command === "help" || command === "--help") {
     printUsage();
     return 0;
@@ -25,12 +28,20 @@ export async function runCli(arguments_: readonly string[]): Promise<number> {
 
   const effectiveRoot = command === "index" && operands[0] !== undefined
     ? operands[0]
-    : rootDirectory;
-  const analysis = await analyzeProject(effectiveRoot);
+    : options.rootDirectory;
+  const analysis = command !== "index" && options.graphFile !== undefined
+    ? await loadProjectAnalysis(options.graphFile)
+    : await analyzeProject(effectiveRoot);
   const graph = analysis.graph;
 
   switch (command) {
     case "index": {
+      const outputPath = options.outputFile ?? path.join(
+        analysis.rootDirectory,
+        ".codegraph",
+        "index.json",
+      );
+      await saveProjectAnalysis(analysis, outputPath);
       const edgeCounts = new Map<string, number>();
       for (const edge of graph.getEdges()) {
         edgeCounts.set(edge.type, (edgeCounts.get(edge.type) ?? 0) + 1);
@@ -52,6 +63,7 @@ export async function runCli(arguments_: readonly string[]): Promise<number> {
       for (const [kind, count] of diagnosticCounts) {
         console.log(`  ${kind}: ${count}`);
       }
+      console.log(`Saved: ${path.resolve(outputPath)}`);
       return 0;
     }
 
@@ -134,21 +146,30 @@ export async function runCli(arguments_: readonly string[]): Promise<number> {
   }
 }
 
-function parseRoot(arguments_: readonly string[]): {
-  readonly argumentsWithoutRoot: readonly string[];
+function parseOptions(arguments_: readonly string[]): {
+  readonly operands: readonly string[];
   readonly rootDirectory: string;
+  readonly graphFile: string | undefined;
+  readonly outputFile: string | undefined;
 } {
   const result = [...arguments_];
-  const rootIndex = result.indexOf("--root");
-  if (rootIndex === -1) {
-    return { argumentsWithoutRoot: result, rootDirectory: process.cwd() };
+  const rootDirectory = takeOption(result, "--root") ?? process.cwd();
+  const graphFile = takeOption(result, "--graph");
+  const outputFile = takeOption(result, "--output");
+  return { operands: result, rootDirectory, graphFile, outputFile };
+}
+
+function takeOption(arguments_: string[], option: string): string | undefined {
+  const index = arguments_.indexOf(option);
+  if (index === -1) {
+    return undefined;
   }
-  const root = result[rootIndex + 1];
-  if (root === undefined) {
-    throw new Error("--root requires a directory");
+  const value = arguments_[index + 1];
+  if (value === undefined) {
+    throw new Error(`${option} requires a value`);
   }
-  result.splice(rootIndex, 2);
-  return { argumentsWithoutRoot: result, rootDirectory: root };
+  arguments_.splice(index, 2);
+  return value;
 }
 
 function resolveOne(
@@ -220,13 +241,13 @@ function printImpact(result: ReturnType<typeof analyzeImpact>): void {
 function printUsage(): void {
   console.log([
     "Usage:",
-    "  codegraph index [root]",
-    "  codegraph find <query> [--root <directory>]",
-    "  codegraph deps <symbol> [--root <directory>]",
-    "  codegraph dependents <symbol> [--root <directory>]",
-    "  codegraph path <source> <target> [--root <directory>]",
-    "  codegraph impact <symbol> [--root <directory>]",
-    "  codegraph diff [--root <directory>]",
+    "  codegraph index [root] [--output <file>]",
+    "  codegraph find <query> [--root <directory> | --graph <file>]",
+    "  codegraph deps <symbol> [--root <directory> | --graph <file>]",
+    "  codegraph dependents <symbol> [--root <directory> | --graph <file>]",
+    "  codegraph path <source> <target> [--root <directory> | --graph <file>]",
+    "  codegraph impact <symbol> [--root <directory> | --graph <file>]",
+    "  codegraph diff [--root <directory> | --graph <file>]",
   ].join("\n"));
 }
 
