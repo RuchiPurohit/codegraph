@@ -1,8 +1,56 @@
 # Codegraph
 
-Codegraph will statically analyze source repositories and expose trustworthy code
-relationships as a graph. Phase 1 deliberately contains only a reusable directed
-graph engine; it does not parse TypeScript source code yet.
+Codegraph statically analyzes TypeScript repositories and exposes source-code
+relationships as a directed graph. The current in-memory engine discovers source
+files, parses declarations, resolves internal modules and compiler-resolvable calls,
+answers graph queries, calculates reverse impact, and maps tracked Git changes to
+the smallest enclosing current symbol.
+
+## Current capabilities
+
+- File, function, class, interface, and method nodes with source ranges.
+- `DEFINES`, `IMPORTS`, and `CALLS` edges with provenance and confidence.
+- Relative imports, configured TypeScript path aliases, and barrel re-exports.
+- Default, named, namespace, aliased, and side-effect import syntax.
+- Direct, imported, `this`, concrete-object, injected-object, and interface calls
+  when TypeScript can resolve an indexed declaration.
+- Symbol search, dependencies, dependents, shortest paths, reverse impact, and
+  Git-diff impact analysis.
+
+## CLI
+
+During development:
+
+```bash
+npm run codegraph -- index .
+npm run codegraph -- find AuthService --root .
+npm run codegraph -- deps AuthService.login --root .
+npm run codegraph -- dependents AuthService.login --root .
+npm run codegraph -- path AuthController.login TokenService.generate --root .
+npm run codegraph -- impact AuthService.validateToken --root .
+npm run codegraph -- diff --root .
+```
+
+`deps` and `dependents` follow `CALLS` for symbols and `IMPORTS` for file paths.
+`path` uses BFS and therefore returns a minimum-edge path across `CALLS` and
+`IMPORTS`. `impact` performs reverse BFS with cycle protection.
+
+## Static-analysis limits
+
+- Dynamic element calls such as `handlers[type]()` may remain unresolved.
+- Calls inside arrow functions and anonymous function expressions are not assigned
+  to a caller node yet because those declarations are not modeled.
+- Interface dispatch points to the compile-time interface method with `inferred`
+  confidence; it does not guess a runtime implementation.
+- Package and standard-library targets are intentionally outside the project graph.
+- Multiple calls between the same two symbols currently produce one `CALLS` edge.
+- Overloads and declaration merging can collide under the current syntax-derived
+  symbol IDs and need semantic identity work.
+- `codegraph diff` analyzes tracked changes relative to `HEAD`. Untracked files and
+  deleted symbols are not recoverable from the current AST, and changed lines outside
+  modeled declarations are reported as unmapped.
+- Indexes are rebuilt in memory for each CLI invocation; persistence and incremental
+  indexing are later phases.
 
 ## The graph model
 

@@ -8,12 +8,21 @@ export interface SourceLocation {
   readonly column: number;
 }
 
+export interface SourceRange {
+  readonly file: string;
+  readonly startLine: number;
+  readonly startColumn: number;
+  readonly endLine: number;
+  readonly endColumn: number;
+}
+
 export interface ExtractedDeclaration {
   readonly kind: DeclarationKind;
   readonly name: string;
   readonly qualifiedName: string;
   readonly parentQualifiedName: string | null;
   readonly location: SourceLocation;
+  readonly range: SourceRange;
 }
 
 /**
@@ -32,10 +41,17 @@ export function extractDeclarations(
     name: string,
     qualifiedName: string,
     parentQualifiedName: string | null,
-    node: ts.Node,
+    declarationNode: ts.Node,
+    nameNode: ts.Node,
   ): void {
     const position = sourceFile.getLineAndCharacterOfPosition(
-      node.getStart(sourceFile),
+      nameNode.getStart(sourceFile),
+    );
+    const rangeStart = sourceFile.getLineAndCharacterOfPosition(
+      declarationNode.getStart(sourceFile),
+    );
+    const rangeEnd = sourceFile.getLineAndCharacterOfPosition(
+      declarationNode.getEnd(),
     );
 
     declarations.push({
@@ -47,6 +63,13 @@ export function extractDeclarations(
         file: sourceFile.fileName,
         line: position.line + 1,
         column: position.character + 1,
+      },
+      range: {
+        file: sourceFile.fileName,
+        startLine: rangeStart.line + 1,
+        startColumn: rangeStart.character + 1,
+        endLine: rangeEnd.line + 1,
+        endColumn: rangeEnd.character + 1,
       },
     });
   }
@@ -68,6 +91,7 @@ export function extractDeclarations(
         name,
         qualifiedName,
         parentQualifiedName,
+        node,
         node.name,
       );
 
@@ -87,6 +111,7 @@ export function extractDeclarations(
         name,
         qualifiedName,
         parentQualifiedName,
+        node,
         node.name,
       );
 
@@ -105,6 +130,7 @@ export function extractDeclarations(
         name,
         qualifiedName,
         parentQualifiedName,
+        node,
         node.name,
       );
 
@@ -131,6 +157,7 @@ export function extractDeclarations(
         name,
         qualifiedName,
         parentQualifiedName,
+        node,
         node.name,
       );
 

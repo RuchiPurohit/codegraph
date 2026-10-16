@@ -90,6 +90,38 @@ export class DirectedGraph<
     return this.nodes.get(id);
   }
 
+  getNodes(): readonly GraphNode<NodeData>[] {
+    return [...this.nodes.values()];
+  }
+
+  getEdges(): readonly GraphEdge<EdgeType, EdgeData>[] {
+    const result: GraphEdge<EdgeType, EdgeData>[] = [];
+
+    for (const edgesByNeighbor of this.outgoing.values()) {
+      for (const edgesByType of edgesByNeighbor.values()) {
+        result.push(...edgesByType.values());
+      }
+    }
+
+    return result;
+  }
+
+  getOutgoingEdges(id: string): readonly GraphEdge<EdgeType, EdgeData>[] {
+    this.assertNodeExists(id);
+    return this.edgesFromBucket(this.getAdjacencyBucket(this.outgoing, id));
+  }
+
+  getIncomingEdges(id: string): readonly GraphEdge<EdgeType, EdgeData>[] {
+    this.assertNodeExists(id);
+    return this.edgesFromBucket(this.getAdjacencyBucket(this.incoming, id));
+  }
+
+  hasEdge(from: string, to: string, type: EdgeType): boolean {
+    this.assertNodeExists(from);
+    this.assertNodeExists(to);
+    return this.getAdjacencyBucket(this.outgoing, from).get(to)?.has(type) ?? false;
+  }
+
   /** Returns nodes at the destination of this node's outgoing edges. */
   getNeighbors(id: string): readonly GraphNode<NodeData>[] {
     return this.getDependencies(id);
@@ -264,6 +296,18 @@ export class DirectedGraph<
       }
 
       result.push(node);
+    }
+
+    return result;
+  }
+
+  private edgesFromBucket(
+    bucket: EdgeByNeighbor<EdgeType, EdgeData>,
+  ): readonly GraphEdge<EdgeType, EdgeData>[] {
+    const result: GraphEdge<EdgeType, EdgeData>[] = [];
+
+    for (const edgesByType of bucket.values()) {
+      result.push(...edgesByType.values());
     }
 
     return result;

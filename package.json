@@ -1,7 +1,7 @@
 {
   "name": "codegraph",
   "version": "0.1.0",
-  "description": "A deterministic graph engine for source-code relationships",
+  "description": "A TypeScript code-intelligence graph for imports, calls, queries, and impact analysis",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -11,9 +11,13 @@
       "import": "./dist/index.js"
     }
   },
+  "bin": {
+    "codegraph": "./dist/cli.js"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "check": "tsc --noEmit",
+    "codegraph": "node --import tsx src/cli.ts",
     "example": "node --import tsx examples/basic.ts",
     "inspect-ast": "node --import tsx examples/inspectAst.ts",
     "test": "node --import tsx --test test/*.test.ts"

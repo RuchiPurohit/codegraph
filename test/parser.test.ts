@@ -117,6 +117,13 @@ describe("extractDeclarations", () => {
           line: 2,
           column: 12,
         },
+        range: {
+          file: "src/math.ts",
+          startLine: 2,
+          startColumn: 3,
+          endLine: 2,
+          endColumn: 47,
+        },
       },
     ]);
   });

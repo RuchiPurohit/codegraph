@@ -121,6 +121,23 @@ describe("edges", () => {
 });
 
 describe("relationship queries", () => {
+  it("enumerates nodes and directional edges", () => {
+    const graph = createGraph();
+    addNodes(graph, "A", "B");
+    const edge = { from: "A", to: "B", type: "CALLS" } as const;
+    graph.addEdge(edge);
+
+    assert.deepEqual(
+      graph.getNodes().map((node) => node.id),
+      ["A", "B"],
+    );
+    assert.deepEqual(graph.getEdges(), [edge]);
+    assert.deepEqual(graph.getOutgoingEdges("A"), [edge]);
+    assert.deepEqual(graph.getIncomingEdges("B"), [edge]);
+    assert.equal(graph.hasEdge("A", "B", "CALLS"), true);
+    assert.equal(graph.hasEdge("A", "B", "IMPORTS"), false);
+  });
+
   it("returns outgoing dependencies once in insertion order", () => {
     const graph = createGraph();
     addNodes(graph, "A", "B", "C");
