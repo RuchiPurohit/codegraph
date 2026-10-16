@@ -1,3 +1,15 @@
+export {
+  buildDefinitionGraph,
+  createFileNodeId,
+  createSymbolNodeId,
+} from "./analyzer/buildDefinitionGraph.js";
+export type {
+  CodeGraphEdgeType,
+  CodeGraphNodeData,
+  DefinitionGraph,
+  FileNodeData,
+  SymbolNodeData,
+} from "./analyzer/buildDefinitionGraph.js";
 export { discoverSourceFiles } from "./files/discoverSourceFiles.js";
 export { DirectedGraph } from "./graph/DirectedGraph.js";
 export type { GraphEdge, GraphNode } from "./graph/types.js";

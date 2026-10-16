@@ -63,7 +63,16 @@ export function extractDeclarations(
     if (ts.isFunctionDeclaration(node) && node.name !== undefined) {
       const name = node.name.text;
       const qualifiedName = qualifyName(parentQualifiedName, name);
-      addDeclaration("function", node.name.text, qualifiedName, parentQualifiedName, node.name);
+      addDeclaration(
+        "function",
+        name,
+        qualifiedName,
+        parentQualifiedName,
+        node.name,
+      );
+
+      ts.forEachChild(node, (child) => visit(child, qualifiedName));
+      return;
     }
 
     if (ts.isClassDeclaration(node)) {
@@ -73,7 +82,13 @@ export function extractDeclarations(
 
       const name = node.name.text;
       const qualifiedName = qualifyName(parentQualifiedName, name);
-      addDeclaration("function", node.name.text, qualifiedName, parentQualifiedName, node.name);
+      addDeclaration(
+        "class",
+        name,
+        qualifiedName,
+        parentQualifiedName,
+        node.name,
+      );
 
       for (const member of node.members) {
         visit(member, qualifiedName);
@@ -85,7 +100,13 @@ export function extractDeclarations(
     if (ts.isInterfaceDeclaration(node)) {
       const name = node.name.text;
       const qualifiedName = qualifyName(parentQualifiedName, name);
-      addDeclaration("function", node.name.text, qualifiedName, parentQualifiedName, node.name);
+      addDeclaration(
+        "interface",
+        name,
+        qualifiedName,
+        parentQualifiedName,
+        node.name,
+      );
 
       for (const member of node.members) {
         visit(member, qualifiedName);
@@ -94,8 +115,10 @@ export function extractDeclarations(
       return;
     }
 
-    const isClassMethod = ts.isMethodDeclaration(node) && ts.isClassDeclaration(node.parent);
-    const isInterfaceMethod = ts.isMethodSignature(node) && ts.isInterfaceDeclaration(node.parent);
+    const isClassMethod =
+      ts.isMethodDeclaration(node) && ts.isClassDeclaration(node.parent);
+    const isInterfaceMethod =
+      ts.isMethodSignature(node) && ts.isInterfaceDeclaration(node.parent);
 
     if (
       parentQualifiedName !== null &&
@@ -103,7 +126,16 @@ export function extractDeclarations(
     ) {
       const name = node.name.getText(sourceFile);
       const qualifiedName = qualifyName(parentQualifiedName, name);
-      addDeclaration("method", name, qualifiedName, parentQualifiedName, node.name);
+      addDeclaration(
+        "method",
+        name,
+        qualifiedName,
+        parentQualifiedName,
+        node.name,
+      );
+
+      ts.forEachChild(node, (child) => visit(child, qualifiedName));
+      return;
     }
 
     ts.forEachChild(node, (child) => visit(child, parentQualifiedName));

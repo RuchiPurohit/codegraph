@@ -60,14 +60,42 @@ describe("extractDeclarations", () => {
     const declarations = extractDeclarations(sourceFile);
 
     assert.deepEqual(
-      declarations.map(({ kind, qualifiedName }) => ({ kind, qualifiedName })),
+      declarations.map(({ kind, qualifiedName, parentQualifiedName }) => ({
+        kind,
+        qualifiedName,
+        parentQualifiedName,
+      })),
       [
-        { kind: "function", qualifiedName: "greet" },
-        { kind: "interface", qualifiedName: "UserRepository" },
-        { kind: "method", qualifiedName: "UserRepository.findUser" },
-        { kind: "class", qualifiedName: "UserService" },
-        { kind: "method", qualifiedName: "UserService.getUser" },
-        { kind: "method", qualifiedName: "UserService.validate" },
+        {
+          kind: "function",
+          qualifiedName: "greet",
+          parentQualifiedName: null,
+        },
+        {
+          kind: "interface",
+          qualifiedName: "UserRepository",
+          parentQualifiedName: null,
+        },
+        {
+          kind: "method",
+          qualifiedName: "UserRepository.findUser",
+          parentQualifiedName: "UserRepository",
+        },
+        {
+          kind: "class",
+          qualifiedName: "UserService",
+          parentQualifiedName: null,
+        },
+        {
+          kind: "method",
+          qualifiedName: "UserService.getUser",
+          parentQualifiedName: "UserService",
+        },
+        {
+          kind: "method",
+          qualifiedName: "UserService.validate",
+          parentQualifiedName: "UserService",
+        },
       ],
     );
   });
@@ -83,6 +111,7 @@ describe("extractDeclarations", () => {
         kind: "function",
         name: "add",
         qualifiedName: "add",
+        parentQualifiedName: null,
         location: {
           file: "src/math.ts",
           line: 2,
@@ -90,6 +119,30 @@ describe("extractDeclarations", () => {
         },
       },
     ]);
+  });
+
+  it("qualifies nested functions through their declaration parents", () => {
+    const sourceFile = parseSourceFile(
+      "src/nested.ts",
+      [
+        "function outer() {",
+        "  function inner() {}",
+        "}",
+      ].join("\n"),
+    );
+
+    assert.deepEqual(
+      extractDeclarations(sourceFile).map(
+        ({ qualifiedName, parentQualifiedName }) => ({
+          qualifiedName,
+          parentQualifiedName,
+        }),
+      ),
+      [
+        { qualifiedName: "outer", parentQualifiedName: null },
+        { qualifiedName: "outer.inner", parentQualifiedName: "outer" },
+      ],
+    );
   });
 
   it("ignores anonymous declarations that cannot be named", () => {
