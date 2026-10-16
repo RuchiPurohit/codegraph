@@ -5,6 +5,15 @@ export type {
   ProjectAnalysis,
 } from "./analyzer/analyzeProject.js";
 export {
+  defaultIndexPath,
+  updateProjectAnalysis,
+  updateProjectIndex,
+} from "./analyzer/incrementalIndex.js";
+export type {
+  FileChanges,
+  IncrementalUpdateResult,
+} from "./analyzer/incrementalIndex.js";
+export {
   buildDefinitionGraph,
   createFileNodeId,
   createSymbolNodeId,

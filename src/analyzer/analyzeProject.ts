@@ -1,4 +1,6 @@
 import path from "node:path";
+import { createHash } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import ts from "typescript";
 
 import { discoverSourceFiles } from "../files/discoverSourceFiles.js";
@@ -34,6 +36,7 @@ export interface ProjectAnalysis {
   readonly rootDirectory: string;
   readonly graph: CodeGraph;
   readonly diagnostics: readonly AnalysisDiagnostic[];
+  readonly fileHashes: Readonly<Record<string, string>>;
 }
 
 export async function analyzeProject(
@@ -42,6 +45,7 @@ export async function analyzeProject(
   const absoluteRoot = path.resolve(rootDirectory);
   const relativeFiles = await discoverSourceFiles(absoluteRoot);
   const rootNames = relativeFiles.map((file) => path.join(absoluteRoot, file));
+  const fileHashes = await hashSourceFiles(absoluteRoot, relativeFiles);
   const compilerOptions = readCompilerOptions(absoluteRoot);
   const program = ts.createProgram({ rootNames, options: compilerOptions });
   const checker = program.getTypeChecker();
@@ -83,7 +87,20 @@ export async function analyzeProject(
     diagnostics,
   );
 
-  return { rootDirectory: absoluteRoot, graph, diagnostics };
+  return { rootDirectory: absoluteRoot, graph, diagnostics, fileHashes };
+}
+
+async function hashSourceFiles(
+  rootDirectory: string,
+  relativeFiles: readonly string[],
+): Promise<Readonly<Record<string, string>>> {
+  const entries = await Promise.all(
+    relativeFiles.map(async (filePath) => {
+      const contents = await readFile(path.join(rootDirectory, filePath));
+      return [filePath, createHash("sha256").update(contents).digest("hex")] as const;
+    }),
+  );
+  return Object.fromEntries(entries);
 }
 
 function readCompilerOptions(rootDirectory: string): ts.CompilerOptions {

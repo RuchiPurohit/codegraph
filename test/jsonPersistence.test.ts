@@ -37,6 +37,7 @@ describe("JSON persistence", () => {
       rootDirectory: "/project",
       graph,
       diagnostics: [],
+      fileHashes: { "src/service.ts": "test-hash" },
     };
   }
 
@@ -66,12 +67,12 @@ describe("JSON persistence", () => {
     const loaded = await loadProjectAnalysis(indexPath);
 
     assert.equal(loaded.graph.nodeCount, 3);
-    assert.match(await readFile(indexPath, "utf8"), /"schemaVersion": 1/);
+    assert.match(await readFile(indexPath, "utf8"), /"schemaVersion": 2/);
   });
 
   it("rejects unsupported schema versions", () => {
     const serialized = serializeProjectAnalysis(createAnalysis()).replace(
-      '"schemaVersion": 1',
+      '"schemaVersion": 2',
       '"schemaVersion": 999',
     );
 

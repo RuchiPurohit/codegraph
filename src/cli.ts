@@ -6,6 +6,7 @@ import {
   analyzeDiffImpact,
   analyzeImpact,
   analyzeProject,
+  defaultIndexPath,
   findCodePath,
   findSymbols,
   getCodeDependencies,
@@ -13,6 +14,7 @@ import {
   loadProjectAnalysis,
   readGitDiff,
   saveProjectAnalysis,
+  updateProjectIndex,
   type CodeGraph,
   type CodeGraphNodeData,
   type GraphNode,
@@ -29,6 +31,18 @@ export async function runCli(arguments_: readonly string[]): Promise<number> {
   const effectiveRoot = command === "index" && operands[0] !== undefined
     ? operands[0]
     : options.rootDirectory;
+  if (command === "update") {
+    const updateRoot = operands[0] ?? options.rootDirectory;
+    const indexPath = options.graphFile ?? defaultIndexPath(updateRoot);
+    const result = await updateProjectIndex(indexPath, updateRoot);
+    console.log(`Added files: ${result.files.added.length}`);
+    console.log(`Changed files: ${result.files.changed.length}`);
+    console.log(`Deleted files: ${result.files.deleted.length}`);
+    console.log(`Affected files: ${result.files.affected.length}`);
+    console.log(`Reused files: ${result.files.reused.length}`);
+    console.log(`Saved: ${path.resolve(indexPath)}`);
+    return 0;
+  }
   const analysis = command !== "index" && options.graphFile !== undefined
     ? await loadProjectAnalysis(options.graphFile)
     : await analyzeProject(effectiveRoot);
@@ -36,10 +50,8 @@ export async function runCli(arguments_: readonly string[]): Promise<number> {
 
   switch (command) {
     case "index": {
-      const outputPath = options.outputFile ?? path.join(
+      const outputPath = options.outputFile ?? defaultIndexPath(
         analysis.rootDirectory,
-        ".codegraph",
-        "index.json",
       );
       await saveProjectAnalysis(analysis, outputPath);
       const edgeCounts = new Map<string, number>();
@@ -242,6 +254,7 @@ function printUsage(): void {
   console.log([
     "Usage:",
     "  codegraph index [root] [--output <file>]",
+    "  codegraph update [root] [--graph <file>]",
     "  codegraph find <query> [--root <directory> | --graph <file>]",
     "  codegraph deps <symbol> [--root <directory> | --graph <file>]",
     "  codegraph dependents <symbol> [--root <directory> | --graph <file>]",

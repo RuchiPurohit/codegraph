@@ -86,6 +86,48 @@ export class DirectedGraph<
     edgesFromSource.set(edge.type, edge);
   }
 
+  removeNode(id: string): boolean {
+    if (!this.nodes.has(id)) {
+      return false;
+    }
+
+    const outgoing = this.getAdjacencyBucket(this.outgoing, id);
+    for (const destinationId of outgoing.keys()) {
+      this.getAdjacencyBucket(this.incoming, destinationId).delete(id);
+    }
+
+    const incoming = this.getAdjacencyBucket(this.incoming, id);
+    for (const sourceId of incoming.keys()) {
+      this.getAdjacencyBucket(this.outgoing, sourceId).delete(id);
+    }
+
+    this.outgoing.delete(id);
+    this.incoming.delete(id);
+    this.nodes.delete(id);
+    return true;
+  }
+
+  removeEdge(from: string, to: string, type: EdgeType): boolean {
+    this.assertNodeExists(from);
+    this.assertNodeExists(to);
+    const outgoingByNeighbor = this.getAdjacencyBucket(this.outgoing, from);
+    const outgoingByType = outgoingByNeighbor.get(to);
+    if (outgoingByType === undefined || !outgoingByType.delete(type)) {
+      return false;
+    }
+    if (outgoingByType.size === 0) {
+      outgoingByNeighbor.delete(to);
+    }
+
+    const incomingByNeighbor = this.getAdjacencyBucket(this.incoming, to);
+    const incomingByType = incomingByNeighbor.get(from);
+    incomingByType?.delete(type);
+    if (incomingByType?.size === 0) {
+      incomingByNeighbor.delete(from);
+    }
+    return true;
+  }
+
   getNode(id: string): GraphNode<NodeData> | undefined {
     return this.nodes.get(id);
   }

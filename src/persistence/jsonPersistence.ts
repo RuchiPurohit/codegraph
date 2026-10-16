@@ -13,7 +13,7 @@ import type {
 import { DirectedGraph } from "../graph/DirectedGraph.js";
 import type { GraphEdge, GraphNode } from "../graph/types.js";
 
-export const CODEGRAPH_JSON_SCHEMA_VERSION = 1;
+export const CODEGRAPH_JSON_SCHEMA_VERSION = 2;
 
 interface PersistedProjectAnalysis {
   readonly format: "codegraph";
@@ -23,6 +23,7 @@ interface PersistedProjectAnalysis {
   readonly nodes: readonly GraphNode<CodeGraphNodeData>[];
   readonly edges: readonly GraphEdge<CodeGraphEdgeType, CodeGraphEdgeData>[];
   readonly diagnostics: readonly AnalysisDiagnostic[];
+  readonly fileHashes: Readonly<Record<string, string>>;
 }
 
 export function serializeProjectAnalysis(analysis: ProjectAnalysis): string {
@@ -34,6 +35,7 @@ export function serializeProjectAnalysis(analysis: ProjectAnalysis): string {
     nodes: analysis.graph.getNodes(),
     edges: analysis.graph.getEdges(),
     diagnostics: analysis.diagnostics,
+    fileHashes: analysis.fileHashes,
   };
 
   return `${JSON.stringify(document, null, 2)}\n`;
@@ -67,6 +69,7 @@ export function deserializeProjectAnalysis(serialized: string): ProjectAnalysis 
     rootDirectory: parsed.rootDirectory,
     graph,
     diagnostics: parsed.diagnostics,
+    fileHashes: parsed.fileHashes,
   };
 }
 
@@ -116,6 +119,9 @@ function assertPersistedDocument(
   if (!Array.isArray(value.diagnostics)) {
     throw new Error("Invalid Codegraph index: diagnostics must be an array");
   }
+  if (!isStringRecord(value.fileHashes)) {
+    throw new Error("Invalid Codegraph index: fileHashes must map paths to hashes");
+  }
 }
 
 function isPersistedNode(value: unknown): boolean {
@@ -134,4 +140,10 @@ function isPersistedEdge(value: unknown): boolean {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+function isStringRecord(value: unknown): value is Record<string, string> {
+  return isRecord(value) && Object.values(value).every(
+    (entry) => typeof entry === "string",
+  );
 }

@@ -41,6 +41,17 @@ npm run codegraph -- find AuthService --graph .codegraph/index.json
 npm run codegraph -- impact AuthService.login --graph .codegraph/index.json
 ```
 
+After source files change, update the saved index incrementally:
+
+```bash
+npm run codegraph -- update .
+```
+
+`update` hashes current source files, detects additions, edits, and deletions,
+expands the affected set through reverse imports, replaces stale nodes and edges,
+and reuses unaffected graph data. Use `--graph <file>` when the index is stored
+somewhere other than `.codegraph/index.json`.
+
 Use `--output <file>` to choose another index location. A cached graph can become
 stale after source edits, so rerun `index` before relying on cached results. JSON
 is used because the current workflow writes and loads the whole graph and benefits
@@ -67,7 +78,8 @@ readers.
   deleted symbols are not recoverable from the current AST, and changed lines outside
   modeled declarations are reported as unmapped.
 - Query commands rebuild from source unless `--graph` explicitly selects a persisted
-  JSON index. Incremental freshness checking is not implemented yet.
+  JSON index. `update` performs incremental graph replacement, but it still creates a
+  fresh project-wide TypeScript Program so semantic resolution remains correct.
 
 ## The graph model
 

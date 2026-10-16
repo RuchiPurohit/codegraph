@@ -118,6 +118,32 @@ describe("edges", () => {
     );
     assert.deepEqual(graph.bfs("A"), ["A"]);
   });
+
+  it("removes an edge from outgoing and incoming indexes", () => {
+    const graph = createGraph();
+    addNodes(graph, "A", "B");
+    graph.addEdge({ from: "A", to: "B", type: "CALLS" });
+
+    assert.equal(graph.removeEdge("A", "B", "CALLS"), true);
+    assert.deepEqual(graph.getDependencies("A"), []);
+    assert.deepEqual(graph.getDependents("B"), []);
+    assert.equal(graph.edgeCount, 0);
+    assert.equal(graph.removeEdge("A", "B", "CALLS"), false);
+  });
+
+  it("removes a node and all incident edges", () => {
+    const graph = createGraph();
+    addNodes(graph, "A", "B", "C");
+    graph.addEdge({ from: "A", to: "B", type: "CALLS" });
+    graph.addEdge({ from: "B", to: "C", type: "CALLS" });
+
+    assert.equal(graph.removeNode("B"), true);
+    assert.equal(graph.getNode("B"), undefined);
+    assert.deepEqual(graph.getDependencies("A"), []);
+    assert.deepEqual(graph.getDependents("C"), []);
+    assert.equal(graph.edgeCount, 0);
+    assert.equal(graph.removeNode("B"), false);
+  });
 });
 
 describe("relationship queries", () => {
