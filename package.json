@@ -5,19 +5,29 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./mcp": {
+      "types": "./dist/mcp/server.d.ts",
+      "import": "./dist/mcp/server.js"
     }
   },
   "bin": {
-    "codegraph": "./dist/cli.js"
+    "codegraph": "./dist/cli.js",
+    "codegraph-mcp": "./dist/mcp/stdio.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "check": "tsc --noEmit",
     "codegraph": "node --import tsx src/cli.ts",
+    "codegraph-mcp": "node --import tsx src/mcp/stdio.ts",
     "example": "node --import tsx examples/basic.ts",
     "inspect-ast": "node --import tsx examples/inspectAst.ts",
     "test": "node --import tsx --test test/*.test.ts"
@@ -29,5 +39,9 @@
     "@types/node": "^20.19.0",
     "tsx": "^4.20.0",
     "typescript": "^5.9.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "zod": "^4.6.7"
   }
 }
