@@ -16,6 +16,7 @@ the smallest enclosing current symbol.
   when TypeScript can resolve an indexed declaration.
 - Symbol search, dependencies, dependents, shortest paths, reverse impact, and
   Git-diff impact analysis.
+- A local stdio MCP server with bounded, source-linked tools for coding agents.
 
 ## CLI
 
@@ -62,6 +63,60 @@ readers.
 `deps` and `dependents` follow `CALLS` for symbols and `IMPORTS` for file paths.
 `path` uses BFS and therefore returns a minimum-edge path across `CALLS` and
 `IMPORTS`. `impact` performs reverse BFS with cycle protection.
+
+## MCP for coding agents
+
+The npm package includes a second executable, `codegraph-mcp`. It is a local
+stdio process, not a hosted service: the coding agent starts it inside the
+consumer repository and communicates with it using MCP messages.
+
+Install the package in the TypeScript project that should be analyzed:
+
+```bash
+npm install --save-dev codegraph
+```
+
+Configure an MCP client to launch the project-local binary. The exact config
+file varies by agent, but the stdio command is equivalent to:
+
+```json
+{
+  "type": "stdio",
+  "command": "npx",
+  "args": ["--no-install", "codegraph-mcp", "--root", "."],
+  "cwd": "/absolute/path/to/the/project"
+}
+```
+
+`--root` defaults to the process working directory. Use `--index <file>` to
+override the default `.codegraph/index.json` location.
+
+The server exposes a deliberately small surface:
+
+| Tool | Purpose |
+| --- | --- |
+| `find_symbol` | Resolve a name to stable node IDs and source ranges. |
+| `get_dependencies` | Follow immediate outgoing `CALLS` or `IMPORTS`. |
+| `get_dependents` | Follow immediate incoming `CALLS` or `IMPORTS`. |
+| `find_path` | Find a bounded minimum-edge path between two nodes. |
+| `analyze_impact` | Calculate bounded direct and transitive reverse impact. |
+| `analyze_diff` | Map the tracked Git diff to symbols and blast radius. |
+| `refresh_index` | Refresh the in-memory graph and persisted JSON index. |
+
+All query tools are read-only. Results include repository-relative source paths
+and ranges so an agent can read only the relevant code with its normal file
+tools. Limits and depth bounds prevent dumping the complete graph into model
+context. The server builds a fresh in-memory graph on the first query; agents
+should call `refresh_index` after editing source files.
+
+Applications embedding Codegraph can also construct the server themselves and
+connect any MCP transport:
+
+```ts
+import { createCodeGraphMcpServer } from "codegraph/mcp";
+
+const server = createCodeGraphMcpServer({ rootDirectory: process.cwd() });
+```
 
 ## Static-analysis limits
 
