@@ -76,20 +76,69 @@ Install the package in the TypeScript project that should be analyzed:
 npm install --save-dev codegraph
 ```
 
-Configure an MCP client to launch the project-local binary. The exact config
-file varies by agent, but the stdio command is equivalent to:
+The MCP client launches the project-local executable with:
+
+```bash
+npx --no-install codegraph-mcp --root .
+```
+
+`--root` identifies the repository Codegraph should index and defaults to the
+process working directory. Use `--index <file>` to override the default
+`.codegraph/index.json` location.
+
+### Codex
+
+Run from the consumer project root:
+
+```bash
+codex mcp add codegraph -- npx --no-install codegraph-mcp --root .
+codex mcp list
+```
+
+### Claude Code
+
+Run from the consumer project root:
+
+```bash
+claude mcp add codegraph --scope project -- npx --no-install codegraph-mcp --root .
+claude mcp list
+```
+
+Claude Code stores the shared project configuration in `.mcp.json`.
+
+### Cursor
+
+Create `.cursor/mcp.json` in the consumer project:
 
 ```json
 {
-  "type": "stdio",
-  "command": "npx",
-  "args": ["--no-install", "codegraph-mcp", "--root", "."],
-  "cwd": "/absolute/path/to/the/project"
+  "mcpServers": {
+    "codegraph": {
+      "command": "npx",
+      "args": ["--no-install", "codegraph-mcp", "--root", "."]
+    }
+  }
 }
 ```
 
-`--root` defaults to the process working directory. Use `--index <file>` to
-override the default `.codegraph/index.json` location.
+Restart Cursor after adding the configuration.
+
+### Other MCP clients
+
+Any MCP client that supports local stdio servers can use the same executable.
+The configuration filename and location depend on the client, but the common
+configuration shape is:
+
+```json
+{
+  "mcpServers": {
+    "codegraph": {
+      "command": "npx",
+      "args": ["--no-install", "codegraph-mcp", "--root", "."]
+    }
+  }
+}
+```
 
 The server exposes a deliberately small surface:
 
@@ -108,6 +157,23 @@ and ranges so an agent can read only the relevant code with its normal file
 tools. Limits and depth bounds prevent dumping the complete graph into model
 context. The server builds a fresh in-memory graph on the first query; agents
 should call `refresh_index` after editing source files.
+
+To make tool selection more reliable, add equivalent instructions to
+`AGENTS.md`, `CLAUDE.md`, or the MCP client's project rules:
+
+```md
+Use the CodeGraph MCP tools when investigating this TypeScript codebase.
+
+Before modifying an existing symbol:
+
+1. Use `find_symbol` to locate it.
+2. Use `get_dependencies` to understand what it uses.
+3. Use `get_dependents` or `analyze_impact` to identify what could break.
+4. After editing source files, call `refresh_index`.
+5. Use `analyze_diff` to review the impact of the changes.
+
+Prefer concise CodeGraph results over reading unrelated files.
+```
 
 Applications embedding Codegraph can also construct the server themselves and
 connect any MCP transport:
