@@ -6,6 +6,8 @@ files, parses declarations, resolves internal modules and compiler-resolvable ca
 answers graph queries, calculates reverse impact, and maps tracked Git changes to
 the smallest enclosing current symbol.
 
+![Codegraph interactive network visualization](docs/assets/interactive-network-graph.png)
+
 ## Current capabilities
 
 - File, function, class, interface, and method nodes with source ranges.
