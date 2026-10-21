@@ -241,6 +241,22 @@ const server = createCodeGraphMcpServer({ rootDirectory: process.cwd() });
   JSON index. `update` performs incremental graph replacement, but it still creates a
   fresh project-wide TypeScript Program so semantic resolution remains correct.
 
+## Releasing
+
+The first npm release was published manually. Subsequent versions publish
+automatically when a GitHub Release is published. Before creating the release:
+
+1. Update `version` in `package.json` and `package-lock.json`.
+2. Merge that version change to `main`.
+3. Create and publish a GitHub Release whose tag is exactly `v<version>` (for
+   example, package version `0.2.0` requires tag `v0.2.0`).
+
+The release workflow verifies the tag, installs from the lockfile, runs the type
+check, tests, and build, then publishes the public package to npm. The npm package
+must have `.github/workflows/publish.yml` configured as a GitHub Actions trusted
+publisher for repository `RuchiPurohit/codegraph` with direct `npm publish`
+allowed. No long-lived npm token is required.
+
 ## The graph model
 
 A **node** (or vertex) represents an entity. An **edge** represents a relationship
