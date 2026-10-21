@@ -1,7 +1,18 @@
 {
   "name": "repo-codegraph",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A TypeScript code-intelligence graph for imports, calls, queries, and impact analysis",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RuchiPurohit/codegraph.git"
+  },
+  "homepage": "https://github.com/RuchiPurohit/codegraph#readme",
+  "bugs": {
+    "url": "https://github.com/RuchiPurohit/codegraph/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
