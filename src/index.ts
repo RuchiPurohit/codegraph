@@ -71,3 +71,12 @@ export {
   getCodeDependencies,
   getCodeDependents,
 } from "./queries/codeGraphQueries.js";
+export {
+  createVisualizationDocument,
+  startVisualizationServer,
+  writeVisualizationDocument,
+} from "./visualization/viewer.js";
+export type {
+  VisualizationServer,
+  VisualizationServerOptions,
+} from "./visualization/viewer.js";

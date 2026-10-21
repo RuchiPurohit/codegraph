@@ -17,6 +17,8 @@ the smallest enclosing current symbol.
 - Symbol search, dependencies, dependents, shortest paths, reverse impact, and
   Git-diff impact analysis.
 - A local stdio MCP server with bounded, source-linked tools for coding agents.
+- A local, interactive force-directed visualization with search, filters, and
+  focused dependency neighborhoods.
 
 ## CLI
 
@@ -30,6 +32,7 @@ npm run codegraph -- dependents AuthService.login --root .
 npm run codegraph -- path AuthController.login TokenService.generate --root .
 npm run codegraph -- impact AuthService.validateToken --root .
 npm run codegraph -- diff --root .
+npm run codegraph -- visualize .
 ```
 
 `index` writes a versioned JSON snapshot to `.codegraph/index.json`. Query
@@ -41,6 +44,40 @@ npm run codegraph -- index .
 npm run codegraph -- find AuthService --graph .codegraph/index.json
 npm run codegraph -- impact AuthService.login --graph .codegraph/index.json
 ```
+
+After indexing, open the interactive network in the default browser:
+
+```bash
+npm run codegraph -- visualize .
+```
+
+The viewer reads `.codegraph/index.json`, binds only to `127.0.0.1`, and contains
+no CDN scripts or hosted services, so the graph stays on the user's machine.
+Use `--graph <file>` for a custom index, `--port <number>` for a fixed port, or
+`--no-open` to print the URL without launching a browser. Scroll to zoom, drag
+to pan, search by file or symbol, filter relationship types, and click a node to
+focus on its immediate incoming and outgoing neighborhood.
+Hovering over a node reveals its file or symbol name without permanently
+cluttering the graph with labels.
+
+To create a self-contained file that can be opened in an IDE HTML preview,
+export the same visualization instead of starting the local server:
+
+```bash
+npm run codegraph -- visualize . --output .codegraph/visualization.html
+```
+
+All graph data, styles, and interaction code are embedded in the generated HTML;
+it does not fetch the index or load scripts from the network.
+
+The **Ask Codegraph** box supports local graph questions such as “What calls
+`analyzeProject`?”, “What does `runCli` call?”, “What imports `server.ts`?”, and
+“Where is `ProjectSession` defined?”. It matches the question to indexed files
+and symbols, selects the relevant relationship and direction, focuses the graph,
+and lists connected nodes. This is deterministic graph querying rather than an
+LLM, so it does not send repository data to an external service.
+Source paths in node details and question results are IDE deep links; clicking
+one opens the indexed file at its source line in VS Code-compatible editors.
 
 After source files change, update the saved index incrementally:
 

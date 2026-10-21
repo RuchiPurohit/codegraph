@@ -14,6 +14,8 @@ import {
   loadProjectAnalysis,
   readGitDiff,
   saveProjectAnalysis,
+  startVisualizationServer,
+  writeVisualizationDocument,
   updateProjectIndex,
   type CodeGraph,
   type CodeGraphNodeData,
@@ -41,6 +43,30 @@ export async function runCli(arguments_: readonly string[]): Promise<number> {
     console.log(`Affected files: ${result.files.affected.length}`);
     console.log(`Reused files: ${result.files.reused.length}`);
     console.log(`Saved: ${path.resolve(indexPath)}`);
+    return 0;
+  }
+  if (command === "visualize") {
+    const visualizationRoot = operands[0] ?? options.rootDirectory;
+    const indexPath = options.graphFile ?? defaultIndexPath(visualizationRoot);
+    const analysis = await loadProjectAnalysis(indexPath);
+    if (options.outputFile !== undefined) {
+      const outputPath = await writeVisualizationDocument(
+        analysis,
+        options.outputFile,
+      );
+      console.log(`Codegraph visualization saved: ${outputPath}`);
+      console.log(`Index: ${path.resolve(indexPath)}`);
+      return 0;
+    }
+    const visualization = await startVisualizationServer(
+      analysis,
+      options.port === undefined
+        ? { openBrowser: options.openBrowser }
+        : { port: options.port, openBrowser: options.openBrowser },
+    );
+    console.log(`Codegraph visualization: ${visualization.url}`);
+    console.log(`Index: ${path.resolve(indexPath)}`);
+    console.log("Press Ctrl+C to stop.");
     return 0;
   }
   const analysis = command !== "index" && options.graphFile !== undefined
@@ -163,12 +189,22 @@ function parseOptions(arguments_: readonly string[]): {
   readonly rootDirectory: string;
   readonly graphFile: string | undefined;
   readonly outputFile: string | undefined;
+  readonly port: number | undefined;
+  readonly openBrowser: boolean;
 } {
   const result = [...arguments_];
   const rootDirectory = takeOption(result, "--root") ?? process.cwd();
   const graphFile = takeOption(result, "--graph");
   const outputFile = takeOption(result, "--output");
-  return { operands: result, rootDirectory, graphFile, outputFile };
+  const portValue = takeOption(result, "--port");
+  const port = portValue === undefined ? undefined : Number(portValue);
+  if (port !== undefined && (!Number.isInteger(port) || port < 0 || port > 65_535)) {
+    throw new Error("--port must be an integer between 0 and 65535");
+  }
+  const noOpenIndex = result.indexOf("--no-open");
+  const openBrowser = noOpenIndex === -1;
+  if (noOpenIndex !== -1) result.splice(noOpenIndex, 1);
+  return { operands: result, rootDirectory, graphFile, outputFile, port, openBrowser };
 }
 
 function takeOption(arguments_: string[], option: string): string | undefined {
@@ -261,6 +297,7 @@ function printUsage(): void {
     "  codegraph path <source> <target> [--root <directory> | --graph <file>]",
     "  codegraph impact <symbol> [--root <directory> | --graph <file>]",
     "  codegraph diff [--root <directory> | --graph <file>]",
+    "  codegraph visualize [root] [--graph <file>] [--output <html>] [--port <number>] [--no-open]",
   ].join("\n"));
 }
 
