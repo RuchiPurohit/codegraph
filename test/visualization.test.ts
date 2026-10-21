@@ -73,7 +73,7 @@ describe("graph visualization", () => {
       assert.match(await response.text(), /Codegraph/);
       const openResponse = await fetch(`${visualization.url}open?node=${encodeURIComponent("symbol:src%2Fservice.ts:Service.run")}`);
       assert.equal(openResponse.status, 204);
-      assert.deepEqual(openedUris, ["vscode://file/project/src/service.ts:1:32"]);
+      assert.deepEqual(openedUris, ["vscode://file/example/project/src/service.ts:1:24"]);
       assert.equal((await fetch(`${visualization.url}missing`)).status, 404);
     } finally {
       await visualization.close();
