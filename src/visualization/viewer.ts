@@ -60,6 +60,9 @@ export function createVisualizationDocument(
     a.source-link:hover { text-decoration: underline; }
     #answer a.source-link { flex: none; font-size: 11px; white-space: nowrap; }
     .filters { display: flex; flex-wrap: wrap; gap: 10px 14px; font-size: 12px; }
+    .legend-title { margin: 12px 0 7px; color: #9da4bd; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+    .node-legend { display: grid; grid-template-columns: repeat(3, max-content); gap: 7px 14px; color: #d8dbea; font-size: 12px; }
+    .node-legend span { display: flex; align-items: center; gap: 6px; }
     label { display: flex; align-items: center; gap: 6px; }
     .swatch { width: 9px; height: 9px; border-radius: 50%; }
     button { margin-top: 12px; padding: 7px 10px; border: 1px solid #3b405b; border-radius: 7px; background: #252941; color: inherit; cursor: pointer; }
@@ -83,6 +86,15 @@ export function createVisualizationDocument(
     <div class="ask-row"><input id="question" placeholder="Ask: What calls analyzeProject?"><button id="ask">Ask</button></div>
     <div id="answer" aria-live="polite"></div>
     <input id="search" type="search" placeholder="Search files and symbols…" autocomplete="off">
+    <div class="legend-title">Node colors</div>
+    <div class="node-legend" aria-label="Node color legend">
+      <span><i class="swatch" style="background:#4cc9f0"></i>File</span>
+      <span><i class="swatch" style="background:#ff6b6b"></i>Function</span>
+      <span><i class="swatch" style="background:#ffd166"></i>Class</span>
+      <span><i class="swatch" style="background:#70e000"></i>Interface</span>
+      <span><i class="swatch" style="background:#c77dff"></i>Method</span>
+    </div>
+    <div class="legend-title">Relationships</div>
     <div class="filters">
       <label><input type="checkbox" data-edge="DEFINES" checked><span class="swatch" style="background:#73809f"></span>Defines</label>
       <label><input type="checkbox" data-edge="IMPORTS" checked><span class="swatch" style="background:#f6bd60"></span>Imports</label>

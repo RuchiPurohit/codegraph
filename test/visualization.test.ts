@@ -41,6 +41,9 @@ describe("graph visualization", () => {
     assert.match(document, /Hover a node to reveal its label/);
     assert.match(document, /const showLabel = node => node === hovered/);
     assert.match(document, /context\.fillText\(text,x,y\)/);
+    assert.match(document, /Node color legend/);
+    assert.match(document, /#4cc9f0.*File/);
+    assert.match(document, /#c77dff.*Method/);
     assert.match(document, /dx \/ distance \* force/);
     assert.doesNotMatch(document, /https?:\/\/[^<]*\.(js|css)/);
   });
