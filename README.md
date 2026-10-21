@@ -78,6 +78,8 @@ and lists connected nodes. This is deterministic graph querying rather than an
 LLM, so it does not send repository data to an external service.
 Source paths in node details and question results are IDE deep links; clicking
 one opens the indexed file at its source line in VS Code-compatible editors.
+Change-impact questions use incoming `CALLS` relationships, so they show callers
+that may be affected rather than functions the changed symbol itself depends on.
 
 After source files change, update the saved index incrementally:
 

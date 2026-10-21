@@ -44,6 +44,8 @@ describe("graph visualization", () => {
     assert.match(document, /Node color legend/);
     assert.match(document, /#4cc9f0.*File/);
     assert.match(document, /#c77dff.*Method/);
+    assert.match(document, /affected\|impact\|break\|if i change\|when i change/);
+    assert.match(document, /Potentially affected callers/);
     assert.match(document, /dx \/ distance \* force/);
     assert.doesNotMatch(document, /https?:\/\/[^<]*\.(js|css)/);
   });

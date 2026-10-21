@@ -235,14 +235,16 @@ export function createVisualizationDocument(
       const node=bestQuestionNode(question);
       if(!node){answer.textContent='I could not match that question to an indexed file or symbol.';answer.classList.add('visible');return;}
       const lower=question.toLowerCase(); let direction='both', relationship=null;
+      const impactIntent=/affected|impact|break|if i change|when i change|changing/.test(lower);
       if(/what (does|do)|dependencies|depends on|calls from/.test(lower))direction='outgoing';
       if(/what calls|who calls|called by|dependents|what imports|imported by|where .*defined/.test(lower))direction='incoming';
       if(/import/.test(lower))relationship='IMPORTS'; else if(/call|use|depend/.test(lower))relationship='CALLS'; else if(/defin|contain/.test(lower))relationship='DEFINES';
+      if(impactIntent){direction='incoming';relationship='CALLS';}
       if(relationship) { enabledEdges.clear(); enabledEdges.add(relationship); document.querySelectorAll('[data-edge]').forEach(input => { input.checked=input.dataset.edge===relationship; }); }
       const matches=edges.filter(edge => (!relationship||edge.type===relationship) && ((direction!=='incoming'&&edge.source===node)||(direction!=='outgoing'&&edge.target===node)));
       const related=matches.map(edge => edge.source===node?edge.target:edge.source).filter((entry,index,array)=>array.indexOf(entry)===index);
       focusNode(node,related);
-      const heading=(direction==='incoming'?'Incoming':direction==='outgoing'?'Outgoing':'Connected')+(relationship?' '+relationship.toLowerCase():' relationships');
+      const heading=impactIntent?'Potentially affected callers':(direction==='incoming'?'Incoming':direction==='outgoing'?'Outgoing':'Connected')+(relationship?' '+relationship.toLowerCase():' relationships');
       answer.innerHTML='<strong>'+escapeHtml(label(node))+'</strong><br>'+escapeHtml(heading)+': '+related.length+(related.length?related.slice(0,8).map(item=>'<div class="result"><button data-node="'+item.index+'">'+escapeHtml(label(item))+'</button><a class="source-link" href="'+editorHref(item)+'">Open file ↗</a></div>').join(''):'')+'<div class="result"><a class="source-link" href="'+editorHref(node)+'">Open matched source ↗</a></div>';
       answer.querySelectorAll('[data-node]').forEach(button=>button.addEventListener('click',()=>{const target=nodes[Number(button.dataset.node)];if(target)focusNode(target,nodes.filter(item=>isNeighbor(target,item)));}));
       answer.classList.add('visible');
