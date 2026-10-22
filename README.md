@@ -24,29 +24,27 @@ the smallest enclosing current symbol.
 
 ## CLI
 
-During development:
+Install the package in the TypeScript project you want to analyze:
 
 ```bash
-npm run codegraph -- index .
-npm run codegraph -- find AuthService --root .
-npm run codegraph -- deps AuthService.login --root .
-npm run codegraph -- dependents AuthService.login --root .
-npm run codegraph -- path AuthController.login TokenService.generate --root .
-npm run codegraph -- impact AuthService.validateToken --root .
-npm run codegraph -- diff --root .
-npm run codegraph -- visualize .
+npm install --save-dev repo-codegraph   # npm
+pnpm add -D repo-codegraph              # pnpm
 ```
 
-In another project, install the package and run the `codegraph` executable:
+Then run the `codegraph` command from the project root:
 
-```bash
-npm install --save-dev repo-codegraph
-npx codegraph index .
-
-# or with pnpm
-pnpm add -D repo-codegraph
-pnpm codegraph index .
-```
+| Use | npm | pnpm |
+| --- | --- | --- |
+| Build the graph and save it to `.codegraph/index.json` | `npx codegraph index .` | `pnpm codegraph index .` |
+| Update the saved index after source files change | `npx codegraph update .` | `pnpm codegraph update .` |
+| Search for symbols by name | `npx codegraph find AuthService --root .` | `pnpm codegraph find AuthService --root .` |
+| List what a symbol or file depends on | `npx codegraph deps AuthService.login --root .` | `pnpm codegraph deps AuthService.login --root .` |
+| List what depends on a symbol or file | `npx codegraph dependents AuthService.login --root .` | `pnpm codegraph dependents AuthService.login --root .` |
+| Find the shortest connection between two symbols | `npx codegraph path AuthController.login TokenService.generate --root .` | `pnpm codegraph path AuthController.login TokenService.generate --root .` |
+| Show what could be affected by changing a symbol | `npx codegraph impact AuthService.validateToken --root .` | `pnpm codegraph impact AuthService.validateToken --root .` |
+| Show what could be affected by your uncommitted changes (`git diff HEAD`) | `npx codegraph diff --root .` | `pnpm codegraph diff --root .` |
+| Open the interactive graph in your browser | `npx codegraph visualize .` | `pnpm codegraph visualize .` |
+| Show usage | `npx codegraph --help` | `pnpm codegraph --help` |
 
 With pnpm v10, don't put `--` before the arguments (`pnpm run codegraph -- index .`).
 pnpm passes the `--` to the command as a literal argument, and the command then
@@ -57,15 +55,25 @@ commands rebuild from source by default; pass `--graph` to explicitly reuse the
 snapshot when startup speed matters:
 
 ```bash
-npm run codegraph -- index .
-npm run codegraph -- find AuthService --graph .codegraph/index.json
-npm run codegraph -- impact AuthService.login --graph .codegraph/index.json
+# npm
+npx codegraph index .
+npx codegraph find AuthService --graph .codegraph/index.json
+npx codegraph impact AuthService.login --graph .codegraph/index.json
+
+# pnpm
+pnpm codegraph index .
+pnpm codegraph find AuthService --graph .codegraph/index.json
+pnpm codegraph impact AuthService.login --graph .codegraph/index.json
 ```
 
 After indexing, open the interactive network in the default browser:
 
 ```bash
-npm run codegraph -- visualize .
+# npm
+npx codegraph visualize .
+
+# pnpm
+pnpm codegraph visualize .
 ```
 
 The viewer reads `.codegraph/index.json`, binds only to `127.0.0.1`, and contains
@@ -81,7 +89,11 @@ To create a self-contained file that can be opened in an IDE HTML preview,
 export the same visualization instead of starting the local server:
 
 ```bash
-npm run codegraph -- visualize . --output .codegraph/visualization.html
+# npm
+npx codegraph visualize . --output .codegraph/visualization.html
+
+# pnpm
+pnpm codegraph visualize . --output .codegraph/visualization.html
 ```
 
 All graph data, styles, and interaction code are embedded in the generated HTML;
@@ -101,7 +113,11 @@ that may be affected rather than functions the changed symbol itself depends on.
 After source files change, update the saved index incrementally:
 
 ```bash
-npm run codegraph -- update .
+# npm
+npx codegraph update .
+
+# pnpm
+pnpm codegraph update .
 ```
 
 `update` hashes current source files, detects additions, edits, and deletions,
@@ -463,6 +479,10 @@ npm run check
 npm run build
 npm run example
 ```
+
+To run the CLI from source while working on this repo, use the `codegraph`
+script, for example `npm run codegraph -- index .`. It runs `src/cli.ts`
+through `tsx`, so you don't need to build first.
 
 ## Understanding check
 
