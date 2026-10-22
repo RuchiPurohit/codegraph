@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import path from "node:path";
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -19,7 +20,12 @@ import {
   type RefreshMode,
 } from "./projectSession.js";
 
-const SERVER_VERSION = "0.1.0";
+// Resolves to the package root from both src/mcp and dist/mcp.
+const SERVER_VERSION = (
+  JSON.parse(
+    readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
+  ) as { version: string }
+).version;
 const DEFAULT_LIST_LIMIT = 25;
 const MAX_LIST_LIMIT = 100;
 const DEFAULT_PATH_DEPTH = 10;

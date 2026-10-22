@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 
-import { pathToFileURL } from "node:url";
-
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 
+import { isMainModule } from "../isMainModule.js";
 import { createCodeGraphMcpServer } from "./server.js";
 
 export async function runCodeGraphMcpServer(
@@ -34,11 +33,7 @@ function optionValue(
   return value;
 }
 
-const invokedPath = process.argv[1];
-if (
-  invokedPath !== undefined &&
-  import.meta.url === pathToFileURL(invokedPath).href
-) {
+if (isMainModule(import.meta.url)) {
   runCodeGraphMcpServer(process.argv.slice(2)).catch((error: unknown) => {
     // stdout is reserved for MCP protocol messages when using stdio.
     console.error(error instanceof Error ? error.message : String(error));

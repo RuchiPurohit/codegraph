@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 import path from "node:path";
-import { pathToFileURL } from "node:url";
 import {
   analyzeDiffImpact,
   analyzeImpact,
@@ -21,6 +20,7 @@ import {
   type CodeGraphNodeData,
   type GraphNode,
 } from "./index.js";
+import { isMainModule } from "./isMainModule.js";
 
 export async function runCli(arguments_: readonly string[]): Promise<number> {
   const options = parseOptions(arguments_);
@@ -301,8 +301,7 @@ function printUsage(): void {
   ].join("\n"));
 }
 
-const invokedPath = process.argv[1];
-if (invokedPath !== undefined && import.meta.url === pathToFileURL(invokedPath).href) {
+if (isMainModule(import.meta.url)) {
   runCli(process.argv.slice(2))
     .then((exitCode) => {
       process.exitCode = exitCode;
