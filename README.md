@@ -37,6 +37,21 @@ npm run codegraph -- diff --root .
 npm run codegraph -- visualize .
 ```
 
+In another project, install the package and run the `codegraph` executable:
+
+```bash
+npm install --save-dev repo-codegraph
+npx codegraph index .
+
+# or with pnpm
+pnpm add -D repo-codegraph
+pnpm codegraph index .
+```
+
+With pnpm v10, don't put `--` before the arguments (`pnpm run codegraph -- index .`).
+pnpm passes the `--` to the command as a literal argument, and the command then
+does nothing.
+
 `index` writes a versioned JSON snapshot to `.codegraph/index.json`. Query
 commands rebuild from source by default; pass `--graph` to explicitly reuse the
 snapshot when startup speed matters:
@@ -114,7 +129,8 @@ consumer repository and communicates with it using MCP messages.
 Install the package in the TypeScript project that should be analyzed:
 
 ```bash
-npm install --save-dev codegraph
+npm install --save-dev repo-codegraph
+# or: pnpm add -D repo-codegraph
 ```
 
 The MCP client launches the project-local executable with:
