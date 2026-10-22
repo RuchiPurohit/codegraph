@@ -1,12 +1,12 @@
-# Codegraph
+# Codeskope
 
-Codegraph statically analyzes TypeScript repositories and exposes source-code
+Codeskope statically analyzes TypeScript repositories and exposes source-code
 relationships as a directed graph. The current in-memory engine discovers source
 files, parses declarations, resolves internal modules and compiler-resolvable calls,
 answers graph queries, calculates reverse impact, and maps tracked Git changes to
 the smallest enclosing current symbol.
 
-![Codegraph interactive network visualization](docs/assets/interactive-network-graph.png)
+![Codeskope interactive network visualization](docs/assets/interactive-network-graph.png)
 
 ## Current capabilities
 
@@ -27,56 +27,56 @@ the smallest enclosing current symbol.
 Install the package in the TypeScript project you want to analyze:
 
 ```bash
-npm install --save-dev repo-codegraph   # npm
-pnpm add -D repo-codegraph              # pnpm
+npm install --save-dev codeskope   # npm
+pnpm add -D codeskope              # pnpm
 ```
 
-Then run the `codegraph` command from the project root:
+Then run the `codeskope` command from the project root:
 
 | Use | npm | pnpm |
 | --- | --- | --- |
-| Build the graph and save it to `.codegraph/index.json` | `npx codegraph index .` | `pnpm codegraph index .` |
-| Update the saved index after source files change | `npx codegraph update .` | `pnpm codegraph update .` |
-| Search for symbols by name | `npx codegraph find AuthService --root .` | `pnpm codegraph find AuthService --root .` |
-| List what a symbol or file depends on | `npx codegraph deps AuthService.login --root .` | `pnpm codegraph deps AuthService.login --root .` |
-| List what depends on a symbol or file | `npx codegraph dependents AuthService.login --root .` | `pnpm codegraph dependents AuthService.login --root .` |
-| Find the shortest connection between two symbols | `npx codegraph path AuthController.login TokenService.generate --root .` | `pnpm codegraph path AuthController.login TokenService.generate --root .` |
-| Show what could be affected by changing a symbol | `npx codegraph impact AuthService.validateToken --root .` | `pnpm codegraph impact AuthService.validateToken --root .` |
-| Show what could be affected by your uncommitted changes (`git diff HEAD`) | `npx codegraph diff --root .` | `pnpm codegraph diff --root .` |
-| Open the interactive graph in your browser | `npx codegraph visualize .` | `pnpm codegraph visualize .` |
-| Show usage | `npx codegraph --help` | `pnpm codegraph --help` |
+| Build the graph and save it to `.codeskope/index.json` | `npx codeskope index .` | `pnpm codeskope index .` |
+| Update the saved index after source files change | `npx codeskope update .` | `pnpm codeskope update .` |
+| Search for symbols by name | `npx codeskope find AuthService --root .` | `pnpm codeskope find AuthService --root .` |
+| List what a symbol or file depends on | `npx codeskope deps AuthService.login --root .` | `pnpm codeskope deps AuthService.login --root .` |
+| List what depends on a symbol or file | `npx codeskope dependents AuthService.login --root .` | `pnpm codeskope dependents AuthService.login --root .` |
+| Find the shortest connection between two symbols | `npx codeskope path AuthController.login TokenService.generate --root .` | `pnpm codeskope path AuthController.login TokenService.generate --root .` |
+| Show what could be affected by changing a symbol | `npx codeskope impact AuthService.validateToken --root .` | `pnpm codeskope impact AuthService.validateToken --root .` |
+| Show what could be affected by your uncommitted changes (`git diff HEAD`) | `npx codeskope diff --root .` | `pnpm codeskope diff --root .` |
+| Open the interactive graph in your browser | `npx codeskope visualize .` | `pnpm codeskope visualize .` |
+| Show usage | `npx codeskope --help` | `pnpm codeskope --help` |
 
-With pnpm v10, don't put `--` before the arguments (`pnpm run codegraph -- index .`).
+With pnpm v10, don't put `--` before the arguments (`pnpm run codeskope -- index .`).
 pnpm passes the `--` to the command as a literal argument, and the command then
 does nothing.
 
-`index` writes a versioned JSON snapshot to `.codegraph/index.json`. Query
+`index` writes a versioned JSON snapshot to `.codeskope/index.json`. Query
 commands rebuild from source by default; pass `--graph` to explicitly reuse the
 snapshot when startup speed matters:
 
 ```bash
 # npm
-npx codegraph index .
-npx codegraph find AuthService --graph .codegraph/index.json
-npx codegraph impact AuthService.login --graph .codegraph/index.json
+npx codeskope index .
+npx codeskope find AuthService --graph .codeskope/index.json
+npx codeskope impact AuthService.login --graph .codeskope/index.json
 
 # pnpm
-pnpm codegraph index .
-pnpm codegraph find AuthService --graph .codegraph/index.json
-pnpm codegraph impact AuthService.login --graph .codegraph/index.json
+pnpm codeskope index .
+pnpm codeskope find AuthService --graph .codeskope/index.json
+pnpm codeskope impact AuthService.login --graph .codeskope/index.json
 ```
 
 After indexing, open the interactive network in the default browser:
 
 ```bash
 # npm
-npx codegraph visualize .
+npx codeskope visualize .
 
 # pnpm
-pnpm codegraph visualize .
+pnpm codeskope visualize .
 ```
 
-The viewer reads `.codegraph/index.json`, binds only to `127.0.0.1`, and contains
+The viewer reads `.codeskope/index.json`, binds only to `127.0.0.1`, and contains
 no CDN scripts or hosted services, so the graph stays on the user's machine.
 Use `--graph <file>` for a custom index, `--port <number>` for a fixed port, or
 `--no-open` to print the URL without launching a browser. Scroll to zoom, drag
@@ -90,16 +90,16 @@ export the same visualization instead of starting the local server:
 
 ```bash
 # npm
-npx codegraph visualize . --output .codegraph/visualization.html
+npx codeskope visualize . --output .codeskope/visualization.html
 
 # pnpm
-pnpm codegraph visualize . --output .codegraph/visualization.html
+pnpm codeskope visualize . --output .codeskope/visualization.html
 ```
 
 All graph data, styles, and interaction code are embedded in the generated HTML;
 it does not fetch the index or load scripts from the network.
 
-The **Ask Codegraph** box supports local graph questions such as “What calls
+The **Ask Codeskope** box supports local graph questions such as “What calls
 `analyzeProject`?”, “What does `runCli` call?”, “What imports `server.ts`?”, and
 “Where is `ProjectSession` defined?”. It matches the question to indexed files
 and symbols, selects the relevant relationship and direction, focuses the graph,
@@ -114,16 +114,16 @@ After source files change, update the saved index incrementally:
 
 ```bash
 # npm
-npx codegraph update .
+npx codeskope update .
 
 # pnpm
-pnpm codegraph update .
+pnpm codeskope update .
 ```
 
 `update` hashes current source files, detects additions, edits, and deletions,
 expands the affected set through reverse imports, replaces stale nodes and edges,
 and reuses unaffected graph data. Use `--graph <file>` when the index is stored
-somewhere other than `.codegraph/index.json`.
+somewhere other than `.codeskope/index.json`.
 
 Use `--output <file>` to choose another index location. A cached graph can become
 stale after source edits, so rerun `index` before relying on cached results. JSON
@@ -138,33 +138,33 @@ readers.
 
 ## MCP for coding agents
 
-The npm package includes a second executable, `codegraph-mcp`. It is a local
+The npm package includes a second executable, `codeskope-mcp`. It is a local
 stdio process, not a hosted service: the coding agent starts it inside the
 consumer repository and communicates with it using MCP messages.
 
 Install the package in the TypeScript project that should be analyzed:
 
 ```bash
-npm install --save-dev repo-codegraph
-# or: pnpm add -D repo-codegraph
+npm install --save-dev codeskope
+# or: pnpm add -D codeskope
 ```
 
 The MCP client launches the project-local executable with:
 
 ```bash
-npx --no-install codegraph-mcp --root .
+npx --no-install codeskope-mcp --root .
 ```
 
-`--root` identifies the repository Codegraph should index and defaults to the
+`--root` identifies the repository Codeskope should index and defaults to the
 process working directory. Use `--index <file>` to override the default
-`.codegraph/index.json` location.
+`.codeskope/index.json` location.
 
 ### Codex
 
 Run from the consumer project root:
 
 ```bash
-codex mcp add codegraph -- npx --no-install codegraph-mcp --root .
+codex mcp add codeskope -- npx --no-install codeskope-mcp --root .
 codex mcp list
 ```
 
@@ -173,7 +173,7 @@ codex mcp list
 Run from the consumer project root:
 
 ```bash
-claude mcp add codegraph --scope project -- npx --no-install codegraph-mcp --root .
+claude mcp add codeskope --scope project -- npx --no-install codeskope-mcp --root .
 claude mcp list
 ```
 
@@ -186,9 +186,9 @@ Create `.cursor/mcp.json` in the consumer project:
 ```json
 {
   "mcpServers": {
-    "codegraph": {
+    "codeskope": {
       "command": "npx",
-      "args": ["--no-install", "codegraph-mcp", "--root", "."]
+      "args": ["--no-install", "codeskope-mcp", "--root", "."]
     }
   }
 }
@@ -205,9 +205,9 @@ configuration shape is:
 ```json
 {
   "mcpServers": {
-    "codegraph": {
+    "codeskope": {
       "command": "npx",
-      "args": ["--no-install", "codegraph-mcp", "--root", "."]
+      "args": ["--no-install", "codeskope-mcp", "--root", "."]
     }
   }
 }
@@ -248,11 +248,11 @@ Before modifying an existing symbol:
 Prefer concise CodeGraph results over reading unrelated files.
 ```
 
-Applications embedding Codegraph can also construct the server themselves and
+Applications embedding Codeskope can also construct the server themselves and
 connect any MCP transport:
 
 ```ts
-import { createCodeGraphMcpServer } from "codegraph/mcp";
+import { createCodeGraphMcpServer } from "codeskope/mcp";
 
 const server = createCodeGraphMcpServer({ rootDirectory: process.cwd() });
 ```
@@ -268,7 +268,7 @@ const server = createCodeGraphMcpServer({ rootDirectory: process.cwd() });
 - Multiple calls between the same two symbols currently produce one `CALLS` edge.
 - Overloads and declaration merging can collide under the current syntax-derived
   symbol IDs and need semantic identity work.
-- `codegraph diff` analyzes tracked changes relative to `HEAD`. Untracked files and
+- `codeskope diff` analyzes tracked changes relative to `HEAD`. Untracked files and
   deleted symbols are not recoverable from the current AST, and changed lines outside
   modeled declarations are reported as unmapped.
 - Query commands rebuild from source unless `--graph` explicitly selects a persisted
@@ -288,7 +288,7 @@ automatically when a GitHub Release is published. Before creating the release:
 The release workflow verifies the tag, installs from the lockfile, runs the type
 check, tests, and build, then publishes the public package to npm. The npm package
 must have `.github/workflows/publish.yml` configured as a GitHub Actions trusted
-publisher for repository `RuchiPurohit/codegraph` with direct `npm publish`
+publisher for repository `RuchiPurohit/codeskope` with direct `npm publish`
 allowed. No long-lived npm token is required.
 
 ## The graph model
@@ -317,7 +317,7 @@ visited node, such as `A -> B -> C -> A`. Nodes are **disconnected** when no pat
 the chosen direction connects them; a traversal from one component cannot visit
 another.
 
-A directed graph fits Codegraph because relationships such as `CALLS`, `IMPORTS`,
+A directed graph fits Codeskope because relationships such as `CALLS`, `IMPORTS`,
 and `EXTENDS` are directional. Who a function calls and who calls that function are
 both important, but they are not interchangeable.
 
@@ -328,7 +328,7 @@ Let `V` be the number of nodes and `E` the number of edges.
 | Representation | Storage | Add edge | Get outgoing neighbors | Good fit? |
 | --- | ---: | ---: | ---: | --- |
 | Adjacency matrix | `O(V²)` | `O(1)` | `O(V)` | Fast edge checks, but wasteful for sparse graphs |
-| Adjacency list | `O(V + E)` | expected `O(1)` | `O(out-degree)` | Best fit for Codegraph |
+| Adjacency list | `O(V + E)` | expected `O(1)` | `O(out-degree)` | Best fit for Codeskope |
 | Edge list | `O(E)` | `O(1)` | `O(E)` | Simple storage, slow relationship queries |
 
 Source-code graphs are generally sparse: each symbol relates to a small fraction
@@ -398,7 +398,7 @@ stores unique values and is used by traversals to remember visited node IDs.
 ### 1. Types
 
 [`src/graph/types.ts`](src/graph/types.ts) defines generic nodes and edges. They know
-nothing about source files, functions, ASTs, or Codegraph-specific relationships.
+nothing about source files, functions, ASTs, or Codeskope-specific relationships.
 
 ### 2. Internal data structures
 
@@ -480,8 +480,8 @@ npm run build
 npm run example
 ```
 
-To run the CLI from source while working on this repo, use the `codegraph`
-script, for example `npm run codegraph -- index .`. It runs `src/cli.ts`
+To run the CLI from source while working on this repo, use the `codeskope`
+script, for example `npm run codeskope -- index .`. It runs `src/cli.ts`
 through `tsx`, so you don't need to build first.
 
 ## Understanding check

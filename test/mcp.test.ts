@@ -20,7 +20,7 @@ describe("CodeGraph MCP server", () => {
   let client: Client;
 
   before(async () => {
-    root = await mkdtemp(path.join(os.tmpdir(), "codegraph-mcp-"));
+    root = await mkdtemp(path.join(os.tmpdir(), "codeskope-mcp-"));
     await writeFixture(
       "tsconfig.json",
       JSON.stringify({
@@ -71,7 +71,7 @@ describe("CodeGraph MCP server", () => {
         "-c",
         "user.name=CodeGraph Test",
         "-c",
-        "user.email=codegraph@example.test",
+        "user.email=codeskope@example.test",
         "commit",
         "-m",
         "fixture",
@@ -81,7 +81,7 @@ describe("CodeGraph MCP server", () => {
 
     server = createCodeGraphMcpServer({ rootDirectory: root });
     client = new Client(
-      { name: "codegraph-test-client", version: "1.0.0" },
+      { name: "codeskope-test-client", version: "1.0.0" },
       { capabilities: {} },
     );
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();

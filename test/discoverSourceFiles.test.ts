@@ -9,7 +9,7 @@ import { discoverSourceFiles } from "../src/index.js";
 const temporaryDirectories: string[] = [];
 
 async function createTemporaryDirectory(): Promise<string> {
-  const directory = await mkdtemp(path.join(os.tmpdir(), "codegraph-"));
+  const directory = await mkdtemp(path.join(os.tmpdir(), "codeskope-"));
   temporaryDirectories.push(directory);
   return directory;
 }

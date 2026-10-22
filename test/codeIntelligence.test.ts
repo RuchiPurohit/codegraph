@@ -23,7 +23,7 @@ describe("code intelligence", () => {
   let graph: CodeGraph;
 
   before(async () => {
-    root = await mkdtemp(path.join(os.tmpdir(), "codegraph-intelligence-"));
+    root = await mkdtemp(path.join(os.tmpdir(), "codeskope-intelligence-"));
     await writeFixture("tsconfig.json", JSON.stringify({
       compilerOptions: {
         target: "ES2022",

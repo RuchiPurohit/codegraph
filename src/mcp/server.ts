@@ -155,7 +155,7 @@ export function createCodeGraphMcpServer(
     options.indexPath,
   );
   const server = new McpServer(
-    { name: "codegraph", version: SERVER_VERSION },
+    { name: "codeskope", version: SERVER_VERSION },
     {
       instructions: [
         "Use find_symbol before relationship tools so names resolve to stable node IDs.",

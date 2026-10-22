@@ -24,9 +24,9 @@ afterEach(async () => {
 
 describe("incremental indexing", () => {
   it("replaces changed files, refreshes importers, and reuses unrelated files", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "codegraph-incremental-"));
+    const root = await mkdtemp(path.join(os.tmpdir(), "codeskope-incremental-"));
     temporaryDirectories.push(root);
-    const indexPath = path.join(root, ".codegraph", "index.json");
+    const indexPath = path.join(root, ".codeskope", "index.json");
     await writeFixture(root, "tsconfig.json", JSON.stringify({
       compilerOptions: {
         target: "ES2022",
@@ -93,9 +93,9 @@ describe("incremental indexing", () => {
   });
 
   it("refreshes an importer when an added file resolves its import", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "codegraph-added-file-"));
+    const root = await mkdtemp(path.join(os.tmpdir(), "codeskope-added-file-"));
     temporaryDirectories.push(root);
-    const indexPath = path.join(root, ".codegraph", "index.json");
+    const indexPath = path.join(root, ".codeskope", "index.json");
     await writeFixture(root, "tsconfig.json", JSON.stringify({
       compilerOptions: {
         target: "ES2022",

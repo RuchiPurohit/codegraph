@@ -1,6 +1,6 @@
 node_modules/
 dist/
 coverage/
-.codegraph/
+.codeskope/
 .DS_Store
 *.log

@@ -70,7 +70,7 @@ describe("graph visualization", () => {
       const response = await fetch(visualization.url);
       assert.equal(response.status, 200);
       assert.match(response.headers.get("content-type") ?? "", /text\/html/);
-      assert.match(await response.text(), /Codegraph/);
+      assert.match(await response.text(), /Codeskope/);
       const openResponse = await fetch(`${visualization.url}open?node=${encodeURIComponent("symbol:src%2Fservice.ts:Service.run")}`);
       assert.equal(openResponse.status, 204);
       assert.deepEqual(openedUris, ["vscode://file/example/project/src/service.ts:1:24"]);
@@ -81,7 +81,7 @@ describe("graph visualization", () => {
   });
 
   it("writes a self-contained HTML file and creates parent directories", async () => {
-    const directory = await mkdtemp(path.join(os.tmpdir(), "codegraph-viewer-"));
+    const directory = await mkdtemp(path.join(os.tmpdir(), "codeskope-viewer-"));
     try {
       const outputPath = path.join(directory, "nested", "visualization.html");
       assert.equal(

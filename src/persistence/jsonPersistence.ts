@@ -16,7 +16,7 @@ import type { GraphEdge, GraphNode } from "../graph/types.js";
 export const CODEGRAPH_JSON_SCHEMA_VERSION = 2;
 
 interface PersistedProjectAnalysis {
-  readonly format: "codegraph";
+  readonly format: "codeskope";
   readonly schemaVersion: typeof CODEGRAPH_JSON_SCHEMA_VERSION;
   readonly generatedAt: string;
   readonly rootDirectory: string;
@@ -28,7 +28,7 @@ interface PersistedProjectAnalysis {
 
 export function serializeProjectAnalysis(analysis: ProjectAnalysis): string {
   const document: PersistedProjectAnalysis = {
-    format: "codegraph",
+    format: "codeskope",
     schemaVersion: CODEGRAPH_JSON_SCHEMA_VERSION,
     generatedAt: new Date().toISOString(),
     rootDirectory: analysis.rootDirectory,
@@ -47,7 +47,7 @@ export function deserializeProjectAnalysis(serialized: string): ProjectAnalysis 
     parsed = JSON.parse(serialized);
   } catch (error: unknown) {
     throw new Error(
-      `Invalid Codegraph JSON: ${error instanceof Error ? error.message : String(error)}`,
+      `Invalid Codeskope JSON: ${error instanceof Error ? error.message : String(error)}`,
     );
   }
 
@@ -99,28 +99,28 @@ export async function loadProjectAnalysis(
 function assertPersistedDocument(
   value: unknown,
 ): asserts value is PersistedProjectAnalysis {
-  if (!isRecord(value) || value.format !== "codegraph") {
-    throw new Error("Invalid Codegraph index: expected format 'codegraph'");
+  if (!isRecord(value) || value.format !== "codeskope") {
+    throw new Error("Invalid Codeskope index: expected format 'codeskope'");
   }
   if (value.schemaVersion !== CODEGRAPH_JSON_SCHEMA_VERSION) {
     throw new Error(
-      `Unsupported Codegraph schema version: ${String(value.schemaVersion)}`,
+      `Unsupported Codeskope schema version: ${String(value.schemaVersion)}`,
     );
   }
   if (typeof value.rootDirectory !== "string") {
-    throw new Error("Invalid Codegraph index: rootDirectory must be a string");
+    throw new Error("Invalid Codeskope index: rootDirectory must be a string");
   }
   if (!Array.isArray(value.nodes) || !value.nodes.every(isPersistedNode)) {
-    throw new Error("Invalid Codegraph index: nodes must contain valid graph nodes");
+    throw new Error("Invalid Codeskope index: nodes must contain valid graph nodes");
   }
   if (!Array.isArray(value.edges) || !value.edges.every(isPersistedEdge)) {
-    throw new Error("Invalid Codegraph index: edges must contain valid graph edges");
+    throw new Error("Invalid Codeskope index: edges must contain valid graph edges");
   }
   if (!Array.isArray(value.diagnostics)) {
-    throw new Error("Invalid Codegraph index: diagnostics must be an array");
+    throw new Error("Invalid Codeskope index: diagnostics must be an array");
   }
   if (!isStringRecord(value.fileHashes)) {
-    throw new Error("Invalid Codegraph index: fileHashes must map paths to hashes");
+    throw new Error("Invalid Codeskope index: fileHashes must map paths to hashes");
   }
 }
 

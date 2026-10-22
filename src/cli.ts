@@ -54,7 +54,7 @@ export async function runCli(arguments_: readonly string[]): Promise<number> {
         analysis,
         options.outputFile,
       );
-      console.log(`Codegraph visualization saved: ${outputPath}`);
+      console.log(`Codeskope visualization saved: ${outputPath}`);
       console.log(`Index: ${path.resolve(indexPath)}`);
       return 0;
     }
@@ -64,7 +64,7 @@ export async function runCli(arguments_: readonly string[]): Promise<number> {
         ? { openBrowser: options.openBrowser }
         : { port: options.port, openBrowser: options.openBrowser },
     );
-    console.log(`Codegraph visualization: ${visualization.url}`);
+    console.log(`Codeskope visualization: ${visualization.url}`);
     console.log(`Index: ${path.resolve(indexPath)}`);
     console.log("Press Ctrl+C to stop.");
     return 0;
@@ -289,15 +289,15 @@ function printImpact(result: ReturnType<typeof analyzeImpact>): void {
 function printUsage(): void {
   console.log([
     "Usage:",
-    "  codegraph index [root] [--output <file>]",
-    "  codegraph update [root] [--graph <file>]",
-    "  codegraph find <query> [--root <directory> | --graph <file>]",
-    "  codegraph deps <symbol> [--root <directory> | --graph <file>]",
-    "  codegraph dependents <symbol> [--root <directory> | --graph <file>]",
-    "  codegraph path <source> <target> [--root <directory> | --graph <file>]",
-    "  codegraph impact <symbol> [--root <directory> | --graph <file>]",
-    "  codegraph diff [--root <directory> | --graph <file>]",
-    "  codegraph visualize [root] [--graph <file>] [--output <html>] [--port <number>] [--no-open]",
+    "  codeskope index [root] [--output <file>]",
+    "  codeskope update [root] [--graph <file>]",
+    "  codeskope find <query> [--root <directory> | --graph <file>]",
+    "  codeskope deps <symbol> [--root <directory> | --graph <file>]",
+    "  codeskope dependents <symbol> [--root <directory> | --graph <file>]",
+    "  codeskope path <source> <target> [--root <directory> | --graph <file>]",
+    "  codeskope impact <symbol> [--root <directory> | --graph <file>]",
+    "  codeskope diff [--root <directory> | --graph <file>]",
+    "  codeskope visualize [root] [--graph <file>] [--output <html>] [--port <number>] [--no-open]",
   ].join("\n"));
 }
 

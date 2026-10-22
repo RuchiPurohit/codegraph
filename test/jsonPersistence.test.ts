@@ -59,9 +59,9 @@ describe("JSON persistence", () => {
   });
 
   it("writes and loads an index file", async () => {
-    const directory = await mkdtemp(path.join(os.tmpdir(), "codegraph-json-"));
+    const directory = await mkdtemp(path.join(os.tmpdir(), "codeskope-json-"));
     temporaryDirectories.push(directory);
-    const indexPath = path.join(directory, ".codegraph", "index.json");
+    const indexPath = path.join(directory, ".codeskope", "index.json");
 
     await saveProjectAnalysis(createAnalysis(), indexPath);
     const loaded = await loadProjectAnalysis(indexPath);
@@ -78,14 +78,14 @@ describe("JSON persistence", () => {
 
     assert.throws(
       () => deserializeProjectAnalysis(serialized),
-      /Unsupported Codegraph schema version: 999/,
+      /Unsupported Codeskope schema version: 999/,
     );
   });
 
   it("rejects malformed JSON", () => {
     assert.throws(
       () => deserializeProjectAnalysis("{not-json"),
-      /Invalid Codegraph JSON/,
+      /Invalid Codeskope JSON/,
     );
   });
 });

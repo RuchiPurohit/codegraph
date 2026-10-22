@@ -168,5 +168,5 @@ function filePathForNode(node: CodeGraphNodeData): string {
 }
 
 export function defaultIndexPath(rootDirectory: string): string {
-  return path.join(rootDirectory, ".codegraph", "index.json");
+  return path.join(rootDirectory, ".codeskope", "index.json");
 }

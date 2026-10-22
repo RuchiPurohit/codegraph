@@ -34,7 +34,7 @@ export function createVisualizationDocument(
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Codegraph</title>
+  <title>Codeskope</title>
   <style>
     :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
     * { box-sizing: border-box; }
@@ -81,7 +81,7 @@ export function createVisualizationDocument(
 <body>
   <canvas id="graph" aria-label="Interactive code graph"></canvas>
   <section id="controls" class="panel">
-    <h1>Codegraph</h1>
+    <h1>Codeskope</h1>
     <div id="summary" class="subtitle"></div>
     <div class="ask-row"><input id="question" placeholder="Ask: What calls analyzeProject?"><button id="ask">Ask</button></div>
     <div id="answer" aria-live="polite"></div>
@@ -105,10 +105,10 @@ export function createVisualizationDocument(
   </section>
   <aside id="details" class="panel"><button id="close" aria-label="Close">×</button><div id="detail-content"></div></aside>
   <div id="status"></div>
-  <script id="codegraph-data" type="application/json">${payload}</script>
+  <script id="codeskope-data" type="application/json">${payload}</script>
   <script>
   (() => {
-    const data = JSON.parse(document.getElementById('codegraph-data').textContent);
+    const data = JSON.parse(document.getElementById('codeskope-data').textContent);
     const canvas = document.getElementById('graph');
     const context = canvas.getContext('2d');
     const nodes = data.nodes.map((entry, index) => ({

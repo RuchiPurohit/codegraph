@@ -1,14 +1,14 @@
 {
-  "name": "repo-codegraph",
-  "version": "0.2.2",
+  "name": "codeskope",
+  "version": "1.0.0",
   "description": "A TypeScript code-intelligence graph for imports, calls, queries, and impact analysis",
   "repository": {
     "type": "git",
-    "url": "https://github.com/RuchiPurohit/codegraph.git"
+    "url": "https://github.com/RuchiPurohit/codeskope.git"
   },
-  "homepage": "https://github.com/RuchiPurohit/codegraph#readme",
+  "homepage": "https://github.com/RuchiPurohit/codeskope#readme",
   "bugs": {
-    "url": "https://github.com/RuchiPurohit/codegraph/issues"
+    "url": "https://github.com/RuchiPurohit/codeskope/issues"
   },
   "publishConfig": {
     "access": "public"
@@ -31,14 +31,14 @@
     }
   },
   "bin": {
-    "codegraph": "./dist/cli.js",
-    "codegraph-mcp": "./dist/mcp/stdio.js"
+    "codeskope": "./dist/cli.js",
+    "codeskope-mcp": "./dist/mcp/stdio.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "check": "tsc --noEmit",
-    "codegraph": "node --import tsx src/cli.ts",
-    "codegraph-mcp": "node --import tsx src/mcp/stdio.ts",
+    "codeskope": "node --import tsx src/cli.ts",
+    "codeskope-mcp": "node --import tsx src/mcp/stdio.ts",
     "example": "node --import tsx examples/basic.ts",
     "inspect-ast": "node --import tsx examples/inspectAst.ts",
     "test": "node --import tsx --test test/*.test.ts"
