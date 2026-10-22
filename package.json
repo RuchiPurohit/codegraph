@@ -41,7 +41,8 @@
     "codeskope-mcp": "node --import tsx src/mcp/stdio.ts",
     "example": "node --import tsx examples/basic.ts",
     "inspect-ast": "node --import tsx examples/inspectAst.ts",
-    "test": "node --import tsx --test test/*.test.ts"
+    "test": "node --import tsx --test test/*.test.ts",
+    "prepublishOnly": "npm run build"
   },
   "engines": {
     "node": ">=20"
