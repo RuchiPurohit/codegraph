@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 import ts from "typescript";
 
 import { discoverSourceFiles } from "../files/discoverSourceFiles.js";
+import { isFunctionInitializer } from "../parser/extractDeclarations.js";
 import type { GraphNode } from "../graph/types.js";
 import {
   buildDefinitionGraph,
@@ -20,8 +21,7 @@ export type AnalysisDiagnosticKind =
   | "unresolved-import"
   | "external-import"
   | "unresolved-call"
-  | "external-call"
-  | "unmodeled-caller"
+  | "unindexed-target"
   | "ambiguous-call";
 
 export interface AnalysisDiagnostic {
@@ -122,10 +122,14 @@ function readCompilerOptions(rootDirectory: string): ts.CompilerOptions {
     throw new Error(formatDiagnostic(loaded.error, rootDirectory));
   }
 
+  // Passing the config file name sets `configFilePath`, so automatic @types
+  // resolve from the project rather than from the process working directory.
   const parsed = ts.parseJsonConfigFileContent(
     loaded.config,
     ts.sys,
     path.dirname(configPath),
+    undefined,
+    configPath,
   );
 
   if (parsed.errors.length > 0) {
@@ -285,38 +289,40 @@ function addCallEdge(
   diagnostics: AnalysisDiagnostic[],
 ): void {
   const callLocation = locationFor(sourceFile, call.expression, filePath);
-  const targetDeclarations = resolvedCallDeclarations(call, checker);
-  const targetIds = new Map<string, ts.Declaration>();
-  let hasInternalTarget = false;
-
-  for (const declaration of targetDeclarations) {
-    const name = declarationNameNode(declaration);
-    const targetSourceFile = declaration.getSourceFile();
-    if (!isInsideRoot(rootDirectory, targetSourceFile.fileName)) {
-      continue;
-    }
-    const targetPath = toProjectPath(rootDirectory, targetSourceFile.fileName);
-    if (graph.getNode(createFileNodeId(targetPath)) === undefined) {
-      continue;
-    }
-    hasInternalTarget = true;
-    if (name === undefined) {
-      continue;
-    }
-    const targetId = symbolNodesByLocation.get(
-      nodeLocationKey(targetSourceFile, name, targetPath),
-    )?.id;
-    if (targetId !== undefined) {
-      targetIds.set(targetId, declaration);
+  const signatureDeclarations = resolvedSignatureDeclarations(call, checker);
+  let targets = mapIndexedTargets(
+    signatureDeclarations,
+    graph,
+    symbolNodesByLocation,
+    rootDirectory,
+  );
+  // A signature can come from a type (`const handler: Handler = ...`) rather
+  // than from the callee itself; the callee's symbol is the better target then.
+  let hasAnyDeclaration = signatureDeclarations.length > 0;
+  if (targets.ids.size === 0) {
+    const symbolDeclarations = resolvedSymbolDeclarations(call, checker);
+    if (symbolDeclarations.length > 0) {
+      hasAnyDeclaration = true;
+      const fromSymbol = mapIndexedTargets(
+        symbolDeclarations,
+        graph,
+        symbolNodesByLocation,
+        rootDirectory,
+      );
+      targets = {
+        ids: fromSymbol.ids,
+        hasInternalTarget: targets.hasInternalTarget || fromSymbol.hasInternalTarget,
+      };
     }
   }
+  const targetIds = targets.ids;
 
   if (targetIds.size === 0) {
-    if (targetDeclarations.length > 0 && !hasInternalTarget) {
+    if (hasAnyDeclaration && !targets.hasInternalTarget) {
       return;
     }
     diagnostics.push({
-      kind: targetDeclarations.length === 0 ? "unresolved-call" : "external-call",
+      kind: hasAnyDeclaration ? "unindexed-target" : "unresolved-call",
       message: `Could not map call '${call.expression.getText(sourceFile)}' to an indexed declaration`,
       ...callLocation,
     });
@@ -332,31 +338,7 @@ function addCallEdge(
     return;
   }
 
-  const callerDeclaration = findContainingCallable(call);
-  const callerName = callerDeclaration === undefined
-    ? undefined
-    : declarationNameNode(callerDeclaration);
-
-  if (callerName === undefined) {
-    diagnostics.push({
-      kind: "unmodeled-caller",
-      message: `Call '${call.expression.getText(sourceFile)}' is outside a modeled named function or method`,
-      ...callLocation,
-    });
-    return;
-  }
-
-  const callerId = symbolNodesByLocation.get(
-    nodeLocationKey(sourceFile, callerName, filePath),
-  )?.id;
-  if (callerId === undefined) {
-    diagnostics.push({
-      kind: "unmodeled-caller",
-      message: `Could not map the containing declaration for '${call.expression.getText(sourceFile)}'`,
-      ...callLocation,
-    });
-    return;
-  }
+  const callerId = findCallerNodeId(call, sourceFile, filePath, symbolNodesByLocation);
 
   const target = [...targetIds.entries()][0];
   if (target === undefined) {
@@ -380,15 +362,57 @@ function addCallEdge(
   graph.addEdge({ from: callerId, to: targetId, type: "CALLS", data });
 }
 
-function resolvedCallDeclarations(
+interface IndexedTargets {
+  readonly ids: ReadonlyMap<string, ts.Declaration>;
+  readonly hasInternalTarget: boolean;
+}
+
+function mapIndexedTargets(
+  declarations: readonly ts.Declaration[],
+  graph: CodeGraph,
+  symbolNodesByLocation: ReadonlyMap<string, GraphNode<SymbolNodeData>>,
+  rootDirectory: string,
+): IndexedTargets {
+  const ids = new Map<string, ts.Declaration>();
+  let hasInternalTarget = false;
+
+  for (const declaration of declarations) {
+    const name = declarationNameNode(declaration);
+    const targetSourceFile = declaration.getSourceFile();
+    if (!isInsideRoot(rootDirectory, targetSourceFile.fileName)) {
+      continue;
+    }
+    const targetPath = toProjectPath(rootDirectory, targetSourceFile.fileName);
+    if (graph.getNode(createFileNodeId(targetPath)) === undefined) {
+      continue;
+    }
+    hasInternalTarget = true;
+    if (name === undefined) {
+      continue;
+    }
+    const targetId = symbolNodesByLocation.get(
+      nodeLocationKey(targetSourceFile, name, targetPath),
+    )?.id;
+    if (targetId !== undefined) {
+      ids.set(targetId, declaration);
+    }
+  }
+
+  return { ids, hasInternalTarget };
+}
+
+function resolvedSignatureDeclarations(
   call: ts.CallExpression,
   checker: ts.TypeChecker,
 ): readonly ts.Declaration[] {
   const signatureDeclaration = checker.getResolvedSignature(call)?.declaration;
-  if (signatureDeclaration !== undefined) {
-    return [signatureDeclaration];
-  }
+  return signatureDeclaration === undefined ? [] : [signatureDeclaration];
+}
 
+function resolvedSymbolDeclarations(
+  call: ts.CallExpression,
+  checker: ts.TypeChecker,
+): readonly ts.Declaration[] {
   let symbol = checker.getSymbolAtLocation(call.expression);
   if (symbol === undefined && ts.isPropertyAccessExpression(call.expression)) {
     symbol = checker.getSymbolAtLocation(call.expression.name);
@@ -402,16 +426,48 @@ function resolvedCallDeclarations(
   return symbol.declarations ?? [];
 }
 
-function findContainingCallable(call: ts.CallExpression): ts.Declaration | undefined {
+/**
+ * Attributes a call to the nearest enclosing indexed declaration. Anonymous
+ * callbacks (`.map(x => ...)`, `it("...", () => ...)`) are transparent, and a
+ * call with no indexed declaration around it belongs to its file, which is
+ * what runs it when the module is loaded.
+ */
+function findCallerNodeId(
+  call: ts.CallExpression,
+  sourceFile: ts.SourceFile,
+  filePath: string,
+  symbolNodesByLocation: ReadonlyMap<string, GraphNode<SymbolNodeData>>,
+): string {
   let current: ts.Node | undefined = call.parent;
   while (current !== undefined && !ts.isSourceFile(current)) {
-    if (ts.isFunctionDeclaration(current) || ts.isMethodDeclaration(current)) {
-      return current;
-    }
-    if (ts.isArrowFunction(current) || ts.isFunctionExpression(current)) {
-      return undefined;
+    const name = callerNameNode(current);
+    if (name !== undefined) {
+      const callerId = symbolNodesByLocation.get(
+        nodeLocationKey(sourceFile, name, filePath),
+      )?.id;
+      if (callerId !== undefined) {
+        return callerId;
+      }
     }
     current = current.parent;
+  }
+  return createFileNodeId(filePath);
+}
+
+function callerNameNode(node: ts.Node): ts.Node | undefined {
+  if (
+    ts.isFunctionDeclaration(node) ||
+    ts.isMethodDeclaration(node) ||
+    ts.isClassDeclaration(node)
+  ) {
+    return node.name;
+  }
+  if (
+    (ts.isVariableDeclaration(node) || ts.isPropertyDeclaration(node)) &&
+    node.initializer !== undefined &&
+    isFunctionInitializer(node.initializer)
+  ) {
+    return node.name;
   }
   return undefined;
 }
@@ -423,6 +479,23 @@ function declarationNameNode(declaration: ts.Declaration): ts.Node | undefined {
     ts.isMethodSignature(declaration) ||
     ts.isClassDeclaration(declaration) ||
     ts.isInterfaceDeclaration(declaration)
+  ) {
+    return declaration.name;
+  }
+  // Signatures of `const f = () => {}` resolve to the function expression;
+  // the indexed symbol sits on the variable or class field that holds it.
+  if (
+    (ts.isArrowFunction(declaration) || ts.isFunctionExpression(declaration)) &&
+    (ts.isVariableDeclaration(declaration.parent) ||
+      ts.isPropertyDeclaration(declaration.parent)) &&
+    declaration.parent.initializer === declaration
+  ) {
+    return declaration.parent.name;
+  }
+  if (
+    (ts.isVariableDeclaration(declaration) || ts.isPropertyDeclaration(declaration)) &&
+    declaration.initializer !== undefined &&
+    isFunctionInitializer(declaration.initializer)
   ) {
     return declaration.name;
   }

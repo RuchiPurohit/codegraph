@@ -35,6 +35,7 @@ export function extractDeclarations(
   sourceFile: ts.SourceFile,
 ): readonly ExtractedDeclaration[] {
   const declarations: ExtractedDeclaration[] = [];
+  const seenQualifiedNames = new Set<string>();
 
   function addDeclaration(
     kind: DeclarationKind,
@@ -44,6 +45,13 @@ export function extractDeclarations(
     declarationNode: ts.Node,
     nameNode: ts.Node,
   ): void {
+    // Block-scoped helpers and overload signatures can repeat a qualified
+    // name within one file; the first declaration owns the symbol ID.
+    if (seenQualifiedNames.has(qualifiedName)) {
+      return;
+    }
+    seenQualifiedNames.add(qualifiedName);
+
     const position = sourceFile.getLineAndCharacterOfPosition(
       nameNode.getStart(sourceFile),
     );
@@ -165,9 +173,61 @@ export function extractDeclarations(
       return;
     }
 
+    // `const handler = async () => {}` and `const handler = function () {}`
+    // are functions in every way that matters to callers.
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.initializer !== undefined &&
+      isFunctionInitializer(node.initializer)
+    ) {
+      const name = node.name.text;
+      const qualifiedName = qualifyName(parentQualifiedName, name);
+      addDeclaration(
+        "function",
+        name,
+        qualifiedName,
+        parentQualifiedName,
+        node,
+        node.name,
+      );
+
+      ts.forEachChild(node.initializer, (child) => visit(child, qualifiedName));
+      return;
+    }
+
+    // Class fields initialised with a function (`handle = async () => {}`).
+    if (
+      parentQualifiedName !== null &&
+      ts.isPropertyDeclaration(node) &&
+      ts.isClassDeclaration(node.parent) &&
+      node.initializer !== undefined &&
+      isFunctionInitializer(node.initializer)
+    ) {
+      const name = node.name.getText(sourceFile);
+      const qualifiedName = qualifyName(parentQualifiedName, name);
+      addDeclaration(
+        "method",
+        name,
+        qualifiedName,
+        parentQualifiedName,
+        node,
+        node.name,
+      );
+
+      ts.forEachChild(node.initializer, (child) => visit(child, qualifiedName));
+      return;
+    }
+
     ts.forEachChild(node, (child) => visit(child, parentQualifiedName));
   }
 
   visit(sourceFile, null);
   return declarations;
+}
+
+export function isFunctionInitializer(
+  node: ts.Expression,
+): node is ts.ArrowFunction | ts.FunctionExpression {
+  return ts.isArrowFunction(node) || ts.isFunctionExpression(node);
 }
