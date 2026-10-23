@@ -163,6 +163,7 @@ export function createCodeGraphMcpServer(
         "Use find_symbol before relationship tools so names resolve to stable node IDs.",
         "Results are bounded and source-linked; read only the reported source ranges.",
         "Call refresh_index after source files change, then analyze_diff to review blast radius.",
+        "A CALLS relationship whose entity has type 'file' comes from top-level code in that file (module setup or test bodies), not from a named declaration.",
       ].join(" "),
       maxToolInputElements: 100,
     },
@@ -218,7 +219,7 @@ export function createCodeGraphMcpServer(
     session,
     "get_dependencies",
     "Get dependencies",
-    "Follow outgoing CALLS or IMPORTS relationships from a node. Use this to learn what a symbol or file relies on before reading or changing it.",
+    "Follow outgoing CALLS or IMPORTS relationships from a node. Use this to learn what a symbol or file relies on before reading or changing it. For a file, CALLS lists calls made by its top-level code.",
     "outgoing",
   );
   registerRelationshipTool(
@@ -226,7 +227,7 @@ export function createCodeGraphMcpServer(
     session,
     "get_dependents",
     "Get dependents",
-    "Follow incoming CALLS or IMPORTS relationships to a node. Use this to find immediate callers or importers before changing shared code.",
+    "Follow incoming CALLS or IMPORTS relationships to a node. Use this to find immediate callers or importers before changing shared code. A file-typed CALLS dependent means top-level code in that file calls the node.",
     "incoming",
   );
 
@@ -287,7 +288,7 @@ export function createCodeGraphMcpServer(
     {
       title: "Analyze symbol impact",
       description:
-        "Calculate bounded reverse CALLS or IMPORTS impact for one stable node ID. Use this before changing shared code to identify direct and transitive dependents and affected files.",
+        "Calculate bounded reverse CALLS or IMPORTS impact for one stable node ID. Use this before changing shared code to identify direct and transitive dependents and affected files. File-typed dependents are files whose top-level code calls into the change.",
       inputSchema: {
         nodeId: z.string().min(1),
         relationships: relationshipTypesInput,
@@ -396,15 +397,16 @@ export function createCodeGraphMcpServer(
   server.registerTool(
     "refresh_index",
     {
-      title: "Refresh CodeGraph index",
+      title: "Refresh Codeskope index",
       description:
-        "Refresh the local project graph after source files change. Incremental mode reuses unaffected persisted graph data; full mode rebuilds and replaces the saved index.",
+        "Refresh the local project graph after source files change. Incremental mode reuses unaffected persisted graph data; full mode rebuilds and replaces the saved index. excludeTests reports whether test files are left out of the graph (set by the server's --exclude-tests flag).",
       inputSchema: {
         mode: z.enum(["incremental", "full"]).optional(),
       },
       outputSchema: {
         mode: z.enum(["incremental", "full"]),
         indexPath: z.string(),
+        excludeTests: z.boolean(),
         files: z.object({
           added: z.array(z.string()),
           changed: z.array(z.string()),
@@ -446,6 +448,7 @@ export function createCodeGraphMcpServer(
       const structuredContent = {
         mode: effectiveMode,
         indexPath: path.relative(session.rootDirectory, session.indexPath),
+        excludeTests: result.analysis.excludeTests === true,
         files: {
           added,
           changed,
