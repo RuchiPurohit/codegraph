@@ -50,6 +50,32 @@ describe("graph visualization", () => {
     assert.doesNotMatch(document, /https?:\/\/[^<]*\.(js|css)/);
   });
 
+  it("classifies test files for the exclude-tests control", () => {
+    const analysis: ProjectAnalysis = {
+      rootDirectory: "/example/project",
+      graph: buildDefinitionGraph([
+        parseSourceFile("src/service.ts", "export function run() {}"),
+        parseSourceFile("src/service.test.ts", "export function check() {}"),
+        parseSourceFile("src/test/db.ts", "export function seed() {}"),
+      ]),
+      diagnostics: [],
+      fileHashes: {},
+    };
+    const embedded = (document: string): { testFiles: string[]; indexExcludesTests: boolean } =>
+      JSON.parse(
+        document.match(/<script id="codeskope-data" type="application\/json">([\s\S]*?)<\/script>/)?.[1] ?? "{}",
+      );
+
+    const document = createVisualizationDocument(analysis);
+    assert.match(document, /id="exclude-tests"/);
+    assert.deepEqual(embedded(document).testFiles, ["src/service.test.ts", "src/test/db.ts"]);
+    assert.equal(embedded(document).indexExcludesTests, false);
+    assert.equal(
+      embedded(createVisualizationDocument({ ...analysis, excludeTests: true })).indexExcludesTests,
+      true,
+    );
+  });
+
   it("serves the visualization only on the local HTTP endpoint", async (context) => {
     const openedUris: string[] = [];
     let visualization;

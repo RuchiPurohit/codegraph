@@ -4,6 +4,7 @@ import { createServer, type Server } from "node:http";
 import path from "node:path";
 
 import type { ProjectAnalysis } from "../analyzer/analyzeProject.js";
+import { isTestFile } from "../files/discoverSourceFiles.js";
 
 export interface VisualizationServerOptions {
   readonly host?: string;
@@ -22,10 +23,19 @@ export function createVisualizationDocument(
   analysis: ProjectAnalysis,
   openMode: "ide" | "server" = "ide",
 ): string {
+  const nodes = analysis.graph.getNodes();
+  // Classified here so the viewer and `--exclude-tests` share one definition.
+  const testFiles = nodes.flatMap((node) =>
+    node.data.nodeType === "file" && isTestFile(node.data.filePath)
+      ? [node.data.filePath]
+      : [],
+  );
   const payload = JSON.stringify({
     rootDirectory: analysis.rootDirectory,
-    nodes: analysis.graph.getNodes(),
+    nodes,
     edges: analysis.graph.getEdges(),
+    testFiles,
+    indexExcludesTests: analysis.excludeTests === true,
     openMode,
   }).replaceAll("<", "\\u003c");
 
@@ -60,6 +70,8 @@ export function createVisualizationDocument(
     a.source-link:hover { text-decoration: underline; }
     #answer a.source-link { flex: none; font-size: 11px; white-space: nowrap; }
     .filters { display: flex; flex-wrap: wrap; gap: 10px 14px; font-size: 12px; }
+    .scope { font-size: 12px; }
+    .scope label.disabled { color: #6f7590; }
     .legend-title { margin: 12px 0 7px; color: #9da4bd; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
     .node-legend { display: grid; grid-template-columns: repeat(3, max-content); gap: 7px 14px; color: #d8dbea; font-size: 12px; }
     .node-legend span { display: flex; align-items: center; gap: 6px; }
@@ -100,6 +112,10 @@ export function createVisualizationDocument(
       <label><input type="checkbox" data-edge="IMPORTS" checked><span class="swatch" style="background:#f6bd60"></span>Imports</label>
       <label><input type="checkbox" data-edge="CALLS" checked><span class="swatch" style="background:#f28482"></span>Calls</label>
     </div>
+    <div class="legend-title">Scope</div>
+    <div class="scope">
+      <label id="exclude-tests-label"><input type="checkbox" id="exclude-tests"><span id="exclude-tests-text">Exclude tests</span></label>
+    </div>
     <button id="fit">Fit graph</button> <button id="reset">Show all</button>
     <div class="hint" style="margin-top:10px">Hover a node to reveal its label · scroll to zoom · drag to pan · click to focus</div>
   </section>
@@ -121,12 +137,17 @@ export function createVisualizationDocument(
     const edgeColors = { DEFINES: '#73809f', IMPORTS: '#f6bd60', CALLS: '#f28482' };
     const kindColors = { file: '#4cc9f0', function: '#ff6b6b', class: '#ffd166', interface: '#70e000', method: '#c77dff' };
     const enabledEdges = new Set(Object.keys(edgeColors));
+    const testFiles = new Set(data.testFiles);
+    let hideTests = false;
     let width = 0, height = 0, scale = 1, offsetX = 0, offsetY = 0;
     let dragging = false, moved = false, lastX = 0, lastY = 0, selected = null, hovered = null;
-    let visibleNodes = new Set(nodes), simulationTicks = 0;
+    let simulationTicks = 0;
 
     const label = node => node.data.nodeType === 'file' ? node.data.filePath : node.data.qualifiedName;
     const file = node => node.data.nodeType === 'file' ? node.data.filePath : node.data.location.file;
+    const isHidden = node => hideTests && testFiles.has(file(node));
+    const baseNodes = () => nodes.filter(node => !isHidden(node));
+    let visibleNodes = new Set(nodes);
     const color = node => kindColors[node.data.nodeType === 'file' ? 'file' : node.data.declarationKind] || '#8ecae6';
     const radius = node => Math.min(11, 3.3 + Math.sqrt(node.degree) * 1.15);
     const activeEdges = () => edges.filter(edge => enabledEdges.has(edge.type) && visibleNodes.has(edge.source) && visibleNodes.has(edge.target));
@@ -219,14 +240,25 @@ export function createVisualizationDocument(
       return 'vscode://file'+absolutePath+suffix;
     }
     function focusNode(node, related) {
-      selected=node; visibleNodes=new Set([node,...related]); showDetails(node); fit(); restart();
+      selected=node; visibleNodes=new Set([node,...related.filter(item => !isHidden(item))]); showDetails(node); fit(); restart();
+    }
+    function runSearch() {
+      const query=document.getElementById('search').value.trim().toLowerCase();
+      if (!query) { visibleNodes=new Set(baseNodes()); selected=null; }
+      else { const matches=baseNodes().filter(node => label(node).toLowerCase().includes(query) || file(node).toLowerCase().includes(query)); visibleNodes=new Set(matches); selected=matches.length===1?matches[0]:null; }
+      fit(); restart();
+    }
+    function applyTestScope() {
+      if (selected && isHidden(selected)) { selected=null; document.getElementById('details').classList.remove('visible'); }
+      if (selected && !document.getElementById('search').value.trim()) focusNode(selected, nodes.filter(node => isNeighbor(selected, node)));
+      else runSearch();
     }
     function normalizedWords(value) { return value.toLowerCase().replace(/[^a-z0-9_.$/\\-]+/g,' ').trim().split(/\\s+/).filter(word => word.length > 1); }
     function bestQuestionNode(question) {
       const ignored=new Set(['what','which','where','who','does','call','calls','called','uses','use','used','imports','import','imported','defines','define','defined','depends','dependents','dependencies','on','by','is','are','the','a','an','of','for','from','show','find','me']);
       const terms=normalizedWords(question).filter(word => !ignored.has(word));
       let best=null, bestScore=0;
-      nodes.forEach(node => { const name=label(node).toLowerCase(), location=file(node).toLowerCase(); let score=0; terms.forEach(term => { if(name===term)score+=12; else if(name.endsWith('.'+term)||name.endsWith('/'+term))score+=8; else if(name.includes(term))score+=4; if(location.includes(term))score+=2; }); if(score>bestScore){best=node;bestScore=score;} });
+      baseNodes().forEach(node => { const name=label(node).toLowerCase(), location=file(node).toLowerCase(); let score=0; terms.forEach(term => { if(name===term)score+=12; else if(name.endsWith('.'+term)||name.endsWith('/'+term))score+=8; else if(name.includes(term))score+=4; if(location.includes(term))score+=2; }); if(score>bestScore){best=node;bestScore=score;} });
       return best;
     }
     function askQuestion() {
@@ -257,7 +289,7 @@ export function createVisualizationDocument(
       scale = Math.max(.08, Math.min(2.5, Math.min((width - 80) / graphWidth, (height - 80) / graphHeight) * .82));
       offsetX = -((Math.min(...xs) + Math.max(...xs)) / 2) * scale; offsetY = -((Math.min(...ys) + Math.max(...ys)) / 2) * scale;
     }
-    function updateStatus() { document.getElementById('status').textContent = visibleNodes.size + ' nodes · ' + activeEdges().length + ' relationships · local visualization'; }
+    function updateStatus() { document.getElementById('status').textContent = visibleNodes.size + ' nodes · ' + activeEdges().length + ' relationships' + (hideTests ? ' · tests hidden' : '') + ' · local visualization'; }
     function restart() { simulationTicks = 0; updateStatus(); }
 
     canvas.addEventListener('mousedown', event => { dragging = true; moved = false; lastX = event.clientX; lastY = event.clientY; canvas.classList.add('dragging'); });
@@ -265,12 +297,20 @@ export function createVisualizationDocument(
     window.addEventListener('mouseup', event => { if (dragging && !moved) { selected = screenNode(event); if (selected) focusNode(selected,nodes.filter(node => isNeighbor(selected,node))); } dragging=false; canvas.classList.remove('dragging'); });
     canvas.addEventListener('wheel', event => { event.preventDefault(); const previous=scale; scale=Math.max(.05,Math.min(8,scale*Math.exp(-event.deltaY*.001))); offsetX=event.clientX-width/2-(event.clientX-width/2-offsetX)*scale/previous; offsetY=event.clientY-height/2-(event.clientY-height/2-offsetY)*scale/previous; }, {passive:false});
     document.querySelectorAll('[data-edge]').forEach(input => input.addEventListener('change', () => { input.checked ? enabledEdges.add(input.dataset.edge) : enabledEdges.delete(input.dataset.edge); restart(); }));
-    document.getElementById('search').addEventListener('input', event => { const query=event.target.value.trim().toLowerCase(); if (!query) { visibleNodes=new Set(nodes); selected=null; } else { const matches=nodes.filter(node => label(node).toLowerCase().includes(query) || file(node).toLowerCase().includes(query)); visibleNodes=new Set(matches); selected=matches.length===1?matches[0]:null; } fit(); restart(); });
+    document.getElementById('search').addEventListener('input', runSearch);
+    const excludeTests=document.getElementById('exclude-tests');
+    if (data.indexExcludesTests || testFiles.size === 0) {
+      excludeTests.disabled=true; document.getElementById('exclude-tests-label').classList.add('disabled');
+      document.getElementById('exclude-tests-text').textContent=data.indexExcludesTests ? 'Exclude tests (index already excludes them)' : 'Exclude tests (no test files indexed)';
+    } else {
+      document.getElementById('exclude-tests-text').textContent='Exclude tests (' + testFiles.size + ' files)';
+    }
+    excludeTests.addEventListener('change', () => { hideTests=excludeTests.checked; applyTestScope(); });
     document.getElementById('fit').addEventListener('click', fit);
     document.getElementById('ask').addEventListener('click', askQuestion);
     document.getElementById('question').addEventListener('keydown', event => { if(event.key==='Enter')askQuestion(); });
     document.addEventListener('click', async event => { const link=event.target.closest('a.source-link'); if(!link||!link.getAttribute('href').startsWith('/open?'))return; event.preventDefault(); const response=await fetch(link.href); document.getElementById('status').textContent=response.ok?'Opened source in IDE':'Could not open source: '+await response.text(); });
-    document.getElementById('reset').addEventListener('click', () => { visibleNodes=new Set(nodes); selected=null; document.getElementById('search').value=''; document.getElementById('details').classList.remove('visible'); fit(); restart(); });
+    document.getElementById('reset').addEventListener('click', () => { visibleNodes=new Set(baseNodes()); selected=null; document.getElementById('search').value=''; document.getElementById('details').classList.remove('visible'); fit(); restart(); });
     document.getElementById('close').addEventListener('click', () => document.getElementById('details').classList.remove('visible'));
     document.getElementById('summary').textContent = data.rootDirectory + ' · ' + nodes.length + ' nodes · ' + edges.length + ' relationships';
     window.addEventListener('resize', () => { resize(); fit(); }); resize(); setTimeout(fit, 500); updateStatus(); draw();
