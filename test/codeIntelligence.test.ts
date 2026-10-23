@@ -203,3 +203,111 @@ describe("code intelligence", () => {
     assert.deepEqual(result.unmappedLines, []);
   });
 });
+
+describe("call coverage", () => {
+  let root: string;
+  let analysis: Awaited<ReturnType<typeof analyzeProject>>;
+
+  before(async () => {
+    root = await mkdtemp(path.join(os.tmpdir(), "codeskope-coverage-"));
+    await writeFixture("tsconfig.json", JSON.stringify({
+      compilerOptions: {
+        target: "ES2022",
+        module: "ESNext",
+        moduleResolution: "Node",
+        strict: true,
+      },
+    }));
+    await writeFixture(
+      "src/helpers.ts",
+      [
+        "export const seed = async () => 1;",
+        "export function plain() { return 1; }",
+        "export const typed: () => number = () => 2;",
+      ].join("\n"),
+    );
+    await writeFixture(
+      "src/handlers.ts",
+      [
+        'import { plain, seed, typed } from "./helpers";',
+        "export const list = async () => {",
+        "  await seed();",
+        "  JSON.stringify({});",
+        "  return [1].map(() => plain());",
+        "};",
+        "export class Controller {",
+        "  constructor() { plain(); }",
+        "  handle = () => typed();",
+        "}",
+        "plain();",
+      ].join("\n"),
+    );
+    await writeFixture(
+      "src/handlers.spec.ts",
+      [
+        'import { seed } from "./helpers";',
+        "declare function it(name: string, run: () => unknown): void;",
+        'it("seeds", async () => { await seed(); });',
+      ].join("\n"),
+    );
+
+    analysis = await analyzeProject(root);
+  });
+
+  after(async () => {
+    await rm(root, { recursive: true, force: true });
+  });
+
+  async function writeFixture(relativePath: string, contents: string): Promise<void> {
+    const absolutePath = path.join(root, relativePath);
+    await mkdir(path.dirname(absolutePath), { recursive: true });
+    await writeFile(absolutePath, contents);
+  }
+
+  function callsFrom(fromId: string): string[] {
+    return analysis.graph
+      .getOutgoingEdges(fromId)
+      .filter((edge) => edge.type === "CALLS")
+      .map((edge) => edge.to)
+      .sort();
+  }
+
+  it("resolves calls from and to functions held by variables", () => {
+    assert.deepEqual(callsFrom(createSymbolNodeId("src/handlers.ts", "list")), [
+      createSymbolNodeId("src/helpers.ts", "plain"),
+      createSymbolNodeId("src/helpers.ts", "seed"),
+    ]);
+  });
+
+  it("resolves a call through a variable whose signature comes from its type", () => {
+    assert.deepEqual(
+      callsFrom(createSymbolNodeId("src/handlers.ts", "Controller.handle")),
+      [createSymbolNodeId("src/helpers.ts", "typed")],
+    );
+  });
+
+  it("credits constructors to their class and module-level calls to their file", () => {
+    assert.deepEqual(callsFrom(createSymbolNodeId("src/handlers.ts", "Controller")), [
+      createSymbolNodeId("src/helpers.ts", "plain"),
+    ]);
+    assert.deepEqual(callsFrom(createFileNodeId("src/handlers.ts")), [
+      createSymbolNodeId("src/helpers.ts", "plain"),
+    ]);
+    assert.deepEqual(callsFrom(createFileNodeId("src/handlers.spec.ts")), [
+      createSymbolNodeId("src/handlers.spec.ts", "it"),
+      createSymbolNodeId("src/helpers.ts", "seed"),
+    ]);
+  });
+
+  it("reports no call diagnostics for resolvable or external calls", () => {
+    assert.deepEqual(
+      analysis.diagnostics.filter(
+        (diagnostic) =>
+          diagnostic.kind === "unindexed-target" ||
+          diagnostic.kind === "unresolved-call" ||
+          diagnostic.kind === "ambiguous-call",
+      ),
+      [],
+    );
+  });
+});

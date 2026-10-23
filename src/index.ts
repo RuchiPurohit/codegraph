@@ -2,6 +2,7 @@ export { analyzeProject } from "./analyzer/analyzeProject.js";
 export type {
   AnalysisDiagnostic,
   AnalysisDiagnosticKind,
+  AnalyzeProjectOptions,
   ProjectAnalysis,
 } from "./analyzer/analyzeProject.js";
 export {
@@ -32,7 +33,8 @@ export type {
   ResolutionConfidence,
   SymbolNodeData,
 } from "./analyzer/buildDefinitionGraph.js";
-export { discoverSourceFiles } from "./files/discoverSourceFiles.js";
+export { discoverSourceFiles, isTestFile } from "./files/discoverSourceFiles.js";
+export type { DiscoverSourceFilesOptions } from "./files/discoverSourceFiles.js";
 export {
   analyzeDiffImpact,
   parseGitDiff,

@@ -24,6 +24,8 @@ interface PersistedProjectAnalysis {
   readonly edges: readonly GraphEdge<CodeGraphEdgeType, CodeGraphEdgeData>[];
   readonly diagnostics: readonly AnalysisDiagnostic[];
   readonly fileHashes: Readonly<Record<string, string>>;
+  // Optional so indexes written before the option existed still load.
+  readonly excludeTests?: boolean;
 }
 
 export function serializeProjectAnalysis(analysis: ProjectAnalysis): string {
@@ -36,6 +38,7 @@ export function serializeProjectAnalysis(analysis: ProjectAnalysis): string {
     edges: analysis.graph.getEdges(),
     diagnostics: analysis.diagnostics,
     fileHashes: analysis.fileHashes,
+    excludeTests: analysis.excludeTests === true,
   };
 
   return `${JSON.stringify(document, null, 2)}\n`;
@@ -70,6 +73,7 @@ export function deserializeProjectAnalysis(serialized: string): ProjectAnalysis 
     graph,
     diagnostics: parsed.diagnostics,
     fileHashes: parsed.fileHashes,
+    excludeTests: parsed.excludeTests === true,
   };
 }
 
@@ -121,6 +125,9 @@ function assertPersistedDocument(
   }
   if (!isStringRecord(value.fileHashes)) {
     throw new Error("Invalid Codeskope index: fileHashes must map paths to hashes");
+  }
+  if (value.excludeTests !== undefined && typeof value.excludeTests !== "boolean") {
+    throw new Error("Invalid Codeskope index: excludeTests must be a boolean");
   }
 }
 

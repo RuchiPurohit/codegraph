@@ -1,6 +1,6 @@
 {
   "name": "codeskope",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A TypeScript code-intelligence graph for imports, calls, queries, and impact analysis",
   "repository": {
     "type": "git",
@@ -49,11 +49,11 @@
   },
   "devDependencies": {
     "@types/node": "^20.19.0",
-    "tsx": "^4.20.0",
-    "typescript": "^5.9.0"
+    "tsx": "^4.20.0"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.1",
+    "typescript": "^5.9.0",
     "zod": "^4.6.7"
   }
 }

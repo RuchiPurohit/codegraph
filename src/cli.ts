@@ -36,7 +36,11 @@ export async function runCli(arguments_: readonly string[]): Promise<number> {
   if (command === "update") {
     const updateRoot = operands[0] ?? options.rootDirectory;
     const indexPath = options.graphFile ?? defaultIndexPath(updateRoot);
-    const result = await updateProjectIndex(indexPath, updateRoot);
+    const result = await updateProjectIndex(
+      indexPath,
+      updateRoot,
+      options.excludeTests ? { excludeTests: true } : {},
+    );
     console.log(`Added files: ${result.files.added.length}`);
     console.log(`Changed files: ${result.files.changed.length}`);
     console.log(`Deleted files: ${result.files.deleted.length}`);
@@ -71,7 +75,7 @@ export async function runCli(arguments_: readonly string[]): Promise<number> {
   }
   const analysis = command !== "index" && options.graphFile !== undefined
     ? await loadProjectAnalysis(options.graphFile)
-    : await analyzeProject(effectiveRoot);
+    : await analyzeProject(effectiveRoot, { excludeTests: options.excludeTests });
   const graph = analysis.graph;
 
   switch (command) {
@@ -191,6 +195,7 @@ function parseOptions(arguments_: readonly string[]): {
   readonly outputFile: string | undefined;
   readonly port: number | undefined;
   readonly openBrowser: boolean;
+  readonly excludeTests: boolean;
 } {
   const result = [...arguments_];
   const rootDirectory = takeOption(result, "--root") ?? process.cwd();
@@ -204,7 +209,18 @@ function parseOptions(arguments_: readonly string[]): {
   const noOpenIndex = result.indexOf("--no-open");
   const openBrowser = noOpenIndex === -1;
   if (noOpenIndex !== -1) result.splice(noOpenIndex, 1);
-  return { operands: result, rootDirectory, graphFile, outputFile, port, openBrowser };
+  const excludeTestsIndex = result.indexOf("--exclude-tests");
+  const excludeTests = excludeTestsIndex !== -1;
+  if (excludeTestsIndex !== -1) result.splice(excludeTestsIndex, 1);
+  return {
+    operands: result,
+    rootDirectory,
+    graphFile,
+    outputFile,
+    port,
+    openBrowser,
+    excludeTests,
+  };
 }
 
 function takeOption(arguments_: string[], option: string): string | undefined {
@@ -289,8 +305,8 @@ function printImpact(result: ReturnType<typeof analyzeImpact>): void {
 function printUsage(): void {
   console.log([
     "Usage:",
-    "  codeskope index [root] [--output <file>]",
-    "  codeskope update [root] [--graph <file>]",
+    "  codeskope index [root] [--output <file>] [--exclude-tests]",
+    "  codeskope update [root] [--graph <file>] [--exclude-tests]",
     "  codeskope find <query> [--root <directory> | --graph <file>]",
     "  codeskope deps <symbol> [--root <directory> | --graph <file>]",
     "  codeskope dependents <symbol> [--root <directory> | --graph <file>]",

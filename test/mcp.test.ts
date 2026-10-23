@@ -264,6 +264,90 @@ describe("CodeGraph MCP server", () => {
   }
 });
 
+describe("CodeGraph MCP server test scope", () => {
+  let root: string;
+
+  before(async () => {
+    root = await mkdtemp(path.join(os.tmpdir(), "codeskope-mcp-scope-"));
+    await writeFile(path.join(root, "tsconfig.json"), JSON.stringify({
+      compilerOptions: { target: "ES2022", module: "ESNext", moduleResolution: "Node" },
+    }));
+    await mkdir(path.join(root, "src"), { recursive: true });
+    await writeFile(path.join(root, "src/service.ts"), "export function serve() {}");
+    await writeFile(
+      path.join(root, "src/service.test.ts"),
+      'import { serve } from "./service";\nserve();',
+    );
+  });
+
+  after(async () => {
+    await rm(root, { recursive: true, force: true });
+  });
+
+  async function connect(excludeTests: boolean): Promise<{ client: Client; close(): Promise<void> }> {
+    const server = createCodeGraphMcpServer({
+      rootDirectory: root,
+      indexPath: path.join(root, `.codeskope/index-${String(excludeTests)}.json`),
+      excludeTests,
+    });
+    const client = new Client({ name: "codeskope-scope-client", version: "1.0.0" }, { capabilities: {} });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    await server.connect(serverTransport);
+    await client.connect(clientTransport);
+    return { client, close: async () => { await client.close(); await server.close(); } };
+  }
+
+  async function structured(
+    client: Client,
+    name: string,
+    arguments_: Record<string, unknown>,
+  ): Promise<Record<string, unknown>> {
+    const result = await client.callTool({ name, arguments: arguments_ });
+    assert.equal("isError" in result && result.isError, false);
+    assert.ok("structuredContent" in result);
+    return record(result.structuredContent);
+  }
+
+  it("reports top-level test code as a file-typed CALLS dependent", async () => {
+    const { client, close } = await connect(false);
+    try {
+      const refresh = await structured(client, "refresh_index", { mode: "full" });
+      assert.equal(refresh.excludeTests, false);
+      assert.equal(record(refresh.graph).fileCount, 2);
+
+      const serveId = stringValue(
+        arrayOfRecords((await structured(client, "find_symbol", { query: "serve" })).matches)[0]?.id,
+      );
+      const dependents = await structured(client, "get_dependents", {
+        nodeId: serveId,
+        relationships: ["CALLS"],
+      });
+      const entity = record(arrayOfRecords(dependents.relationships)[0]?.entity);
+      assert.equal(entity.type, "file");
+      assert.equal(record(entity.source).path, "src/service.test.ts");
+    } finally {
+      await close();
+    }
+  });
+
+  it("leaves test files out when started with excludeTests", async () => {
+    const { client, close } = await connect(true);
+    try {
+      const refresh = await structured(client, "refresh_index", { mode: "full" });
+      assert.equal(refresh.excludeTests, true);
+      assert.equal(record(refresh.graph).fileCount, 1);
+
+      const serveId = stringValue(
+        arrayOfRecords((await structured(client, "find_symbol", { query: "serve" })).matches)[0]?.id,
+      );
+      const dependents = await structured(client, "get_dependents", { nodeId: serveId });
+      assert.equal(dependents.totalRelationships, 0);
+    } finally {
+      await close();
+    }
+  });
+});
+
 function record(value: unknown): Record<string, unknown> {
   assert.equal(typeof value, "object");
   assert.notEqual(value, null);

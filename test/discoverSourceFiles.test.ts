@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, it } from "node:test";
 
-import { discoverSourceFiles } from "../src/index.js";
+import { discoverSourceFiles, isTestFile } from "../src/index.js";
 
 const temporaryDirectories: string[] = [];
 
@@ -74,6 +74,39 @@ describe("discoverSourceFiles", () => {
     await symlink(externalDirectory, path.join(root, "linked-source"));
 
     assert.deepEqual(await discoverSourceFiles(root), ["src/kept.ts"]);
+  });
+
+  it("leaves out test files and test directories only when asked", async () => {
+    const root = await createTemporaryDirectory();
+    await createFile(root, "src/service.ts");
+    await createFile(root, "src/service.test.ts");
+    await createFile(root, "src/Button.spec.tsx");
+    await createFile(root, "src/__tests__/service.ts");
+    await createFile(root, "src/test/db.ts");
+    await createFile(root, "test/helpers.ts");
+    await createFile(root, "src/testing.ts");
+
+    assert.equal((await discoverSourceFiles(root)).length, 7);
+    assert.deepEqual(await discoverSourceFiles(root, { excludeTests: true }), [
+      "src/service.ts",
+      "src/testing.ts",
+    ]);
+  });
+
+  it("recognises test files by name and by directory segment", () => {
+    for (const file of [
+      "a.test.ts",
+      "src/a.spec.tsx",
+      "src/__tests__/a.ts",
+      "src/__mocks__/a.ts",
+      "src/test/a.ts",
+      "tests/a.ts",
+    ]) {
+      assert.equal(isTestFile(file), true, file);
+    }
+    for (const file of ["src/a.ts", "src/testing.ts", "src/contest/a.ts", "src/latest.ts"]) {
+      assert.equal(isTestFile(file), false, file);
+    }
   });
 
   it("returns an empty list when no source files exist", async () => {

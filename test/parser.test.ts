@@ -152,6 +152,59 @@ describe("extractDeclarations", () => {
     );
   });
 
+  it("extracts functions held by variables and class fields", () => {
+    const sourceFile = parseSourceFile(
+      "src/handlers.ts",
+      [
+        "export const list = async (id: string) => {",
+        "  const format = (value: string) => value;",
+        "  return format(id);",
+        "};",
+        "const legacy = function () {};",
+        "const limit = 10;",
+        "export class Controller {",
+        "  handle = async () => {};",
+        "  count = 0;",
+        "}",
+      ].join("\n"),
+    );
+
+    assert.deepEqual(
+      extractDeclarations(sourceFile).map(
+        ({ kind, qualifiedName, parentQualifiedName }) => ({
+          kind,
+          qualifiedName,
+          parentQualifiedName,
+        }),
+      ),
+      [
+        { kind: "function", qualifiedName: "list", parentQualifiedName: null },
+        { kind: "function", qualifiedName: "list.format", parentQualifiedName: "list" },
+        { kind: "function", qualifiedName: "legacy", parentQualifiedName: null },
+        { kind: "class", qualifiedName: "Controller", parentQualifiedName: null },
+        { kind: "method", qualifiedName: "Controller.handle", parentQualifiedName: "Controller" },
+      ],
+    );
+  });
+
+  it("keeps the first declaration when a qualified name repeats in one file", () => {
+    const sourceFile = parseSourceFile(
+      "src/repeated.ts",
+      [
+        "export function setup() {",
+        "  if (Math.random() > 0.5) { const run = () => 1; run(); }",
+        "  else { const run = () => 2; run(); }",
+        "}",
+      ].join("\n"),
+    );
+
+    const runs = extractDeclarations(sourceFile).filter(
+      (declaration) => declaration.qualifiedName === "setup.run",
+    );
+    assert.equal(runs.length, 1);
+    assert.equal(runs[0]?.location.line, 2);
+  });
+
   it("ignores anonymous declarations that cannot be named", () => {
     const sourceFile = parseSourceFile(
       "src/anonymous.ts",

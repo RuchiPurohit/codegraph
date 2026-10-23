@@ -9,6 +9,14 @@ const IGNORED_DIRECTORY_NAMES = new Set([
   "node_modules",
 ]);
 
+const TEST_DIRECTORY_NAMES = new Set(["__mocks__", "__tests__", "test", "tests"]);
+const TEST_FILE_PATTERN = /\.(test|spec)\.tsx?$/;
+
+export interface DiscoverSourceFilesOptions {
+  /** Leaves out test files and test-only directories (see `isTestFile`). */
+  readonly excludeTests?: boolean;
+}
+
 /**
  * Finds TypeScript source files below `rootDirectory`.
  *
@@ -17,13 +25,28 @@ const IGNORED_DIRECTORY_NAMES = new Set([
  */
 export async function discoverSourceFiles(
   rootDirectory: string,
+  options: DiscoverSourceFilesOptions = {},
 ): Promise<readonly string[]> {
   const absoluteRoot = path.resolve(rootDirectory);
   const sourceFiles: string[] = [];
 
   await visitDirectory(absoluteRoot, absoluteRoot, sourceFiles);
 
-  return sourceFiles.sort((left, right) => left.localeCompare(right));
+  return sourceFiles
+    .filter((file) => options.excludeTests !== true || !isTestFile(file))
+    .sort((left, right) => left.localeCompare(right));
+}
+
+/**
+ * True for `*.test.ts(x)` / `*.spec.ts(x)` files and for anything below a
+ * `__tests__`, `__mocks__`, `test` or `tests` directory, which is where test
+ * helpers (fixtures, seeders, app factories) conventionally live.
+ */
+export function isTestFile(relativePath: string): boolean {
+  const segments = relativePath.split("/");
+  const fileName = segments.pop() ?? "";
+  return TEST_FILE_PATTERN.test(fileName) ||
+    segments.some((segment) => TEST_DIRECTORY_NAMES.has(segment));
 }
 
 async function visitDirectory(
