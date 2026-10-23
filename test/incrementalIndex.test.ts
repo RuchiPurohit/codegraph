@@ -6,6 +6,7 @@ import { afterEach, describe, it } from "node:test";
 
 import {
   analyzeProject,
+  createFileNodeId,
   createSymbolNodeId,
   loadProjectAnalysis,
   saveProjectAnalysis,
@@ -135,6 +136,46 @@ describe("incremental indexing", () => {
       result.analysis.graph.hasEdge(
         createSymbolNodeId("src/importer.ts", "run"),
         createSymbolNodeId("src/created-later.ts", "createdLater"),
+        "CALLS",
+      ),
+      true,
+    );
+  });
+
+  it("keeps an index built without tests test-free across updates", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "codeskope-exclude-tests-"));
+    temporaryDirectories.push(root);
+    const indexPath = path.join(root, ".codeskope", "index.json");
+    await writeFixture(root, "tsconfig.json", JSON.stringify({
+      compilerOptions: {
+        target: "ES2022",
+        module: "ESNext",
+        moduleResolution: "Node",
+      },
+    }));
+    await writeFixture(root, "src/service.ts", "export function serve() {}");
+    await writeFixture(
+      root,
+      "src/service.test.ts",
+      'import { serve } from "./service";\nserve();',
+    );
+    await saveProjectAnalysis(
+      await analyzeProject(root, { excludeTests: true }),
+      indexPath,
+    );
+
+    await writeFixture(root, "src/other.test.ts", "export {};");
+    const kept = await updateProjectIndex(indexPath, root);
+    assert.equal(kept.analysis.excludeTests, true);
+    assert.deepEqual(Object.keys(kept.analysis.fileHashes), ["src/service.ts"]);
+    assert.equal((await loadProjectAnalysis(indexPath)).excludeTests, true);
+
+    const included = await updateProjectIndex(indexPath, root, { excludeTests: false });
+    assert.deepEqual(included.files.added, ["src/other.test.ts", "src/service.test.ts"]);
+    assert.equal(
+      included.analysis.graph.hasEdge(
+        createFileNodeId("src/service.test.ts"),
+        createSymbolNodeId("src/service.ts", "serve"),
         "CALLS",
       ),
       true,

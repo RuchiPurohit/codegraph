@@ -1,6 +1,6 @@
 import path from "node:path";
 
-import type { ProjectAnalysis } from "./analyzeProject.js";
+import type { AnalyzeProjectOptions, ProjectAnalysis } from "./analyzeProject.js";
 import { analyzeProject } from "./analyzeProject.js";
 import {
   createFileNodeId,
@@ -25,12 +25,19 @@ export interface IncrementalUpdateResult {
   readonly files: FileChanges;
 }
 
+/**
+ * Options left unset are taken from the cached index, so an update keeps the
+ * file selection the index was built with.
+ */
 export async function updateProjectIndex(
   indexPath: string,
   rootDirectory?: string,
+  options: AnalyzeProjectOptions = {},
 ): Promise<IncrementalUpdateResult> {
   const cached = await loadProjectAnalysis(indexPath);
-  const fresh = await analyzeProject(rootDirectory ?? cached.rootDirectory);
+  const fresh = await analyzeProject(rootDirectory ?? cached.rootDirectory, {
+    excludeTests: options.excludeTests ?? cached.excludeTests === true,
+  });
   const result = updateProjectAnalysis(cached, fresh);
   await saveProjectAnalysis(result.analysis, indexPath);
   return result;
@@ -63,6 +70,7 @@ export function updateProjectAnalysis(
     graph: cached.graph,
     diagnostics: fresh.diagnostics,
     fileHashes: fresh.fileHashes,
+    excludeTests: fresh.excludeTests === true,
   };
 
   return {

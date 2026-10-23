@@ -66,6 +66,22 @@ pnpm codeskope find AuthService --graph .codeskope/index.json
 pnpm codeskope impact AuthService.login --graph .codeskope/index.json
 ```
 
+### Leaving out tests
+
+Test code often calls shared helpers (fixtures, seeders, app factories) far more
+than application code does, so those helpers dominate `dependents` and `impact`
+results. Pass `--exclude-tests` to index application code only:
+
+```bash
+npx codeskope index . --exclude-tests    # npm
+pnpm codeskope index . --exclude-tests   # pnpm
+```
+
+This leaves out `*.test.ts(x)` and `*.spec.ts(x)` files and everything below a
+`__tests__`, `__mocks__`, `test` or `tests` directory. The choice is saved in
+the index, so a later `update` keeps it; run `index` without the flag to bring
+tests back.
+
 After indexing, open the interactive network in the default browser:
 
 ```bash
@@ -157,7 +173,8 @@ npx --no-install codeskope-mcp --root .
 
 `--root` identifies the repository Codeskope should index and defaults to the
 process working directory. Use `--index <file>` to override the default
-`.codeskope/index.json` location.
+`.codeskope/index.json` location, and `--exclude-tests` to leave test files
+out of the graph (see [Leaving out tests](#leaving-out-tests)).
 
 ### Codex
 

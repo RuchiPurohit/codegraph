@@ -3,6 +3,7 @@ import path from "node:path";
 
 import {
   analyzeProject,
+  type AnalyzeProjectOptions,
   type ProjectAnalysis,
 } from "../analyzer/analyzeProject.js";
 import {
@@ -22,10 +23,16 @@ export type RefreshMode = "incremental" | "full";
 export class CodeGraphProjectSession {
   readonly rootDirectory: string;
   readonly indexPath: string;
+  readonly analyzeOptions: AnalyzeProjectOptions;
   private currentAnalysis: ProjectAnalysis | undefined;
 
-  constructor(rootDirectory: string, indexPath?: string) {
+  constructor(
+    rootDirectory: string,
+    indexPath?: string,
+    analyzeOptions: AnalyzeProjectOptions = {},
+  ) {
     this.rootDirectory = path.resolve(rootDirectory);
+    this.analyzeOptions = analyzeOptions;
     this.indexPath = path.resolve(
       indexPath ?? defaultIndexPath(this.rootDirectory),
     );
@@ -38,7 +45,10 @@ export class CodeGraphProjectSession {
    */
   async getAnalysis(): Promise<ProjectAnalysis> {
     if (this.currentAnalysis === undefined) {
-      this.currentAnalysis = await analyzeProject(this.rootDirectory);
+      this.currentAnalysis = await analyzeProject(
+        this.rootDirectory,
+        this.analyzeOptions,
+      );
     }
     return this.currentAnalysis;
   }
@@ -48,13 +58,14 @@ export class CodeGraphProjectSession {
       const result = await updateProjectIndex(
         this.indexPath,
         this.rootDirectory,
+        this.analyzeOptions,
       );
       this.currentAnalysis = result.analysis;
       return result;
     }
 
     const previous = this.currentAnalysis ?? await loadIfPresent(this.indexPath);
-    const analysis = await analyzeProject(this.rootDirectory);
+    const analysis = await analyzeProject(this.rootDirectory, this.analyzeOptions);
     await saveProjectAnalysis(analysis, this.indexPath);
     this.currentAnalysis = analysis;
 

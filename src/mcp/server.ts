@@ -110,6 +110,7 @@ const READ_ONLY_ANNOTATIONS = {
 export interface CodeGraphMcpServerOptions {
   readonly rootDirectory?: string;
   readonly indexPath?: string;
+  readonly excludeTests?: boolean;
 }
 
 export interface EntitySummary {
@@ -153,6 +154,7 @@ export function createCodeGraphMcpServer(
   const session = new CodeGraphProjectSession(
     options.rootDirectory ?? process.cwd(),
     options.indexPath,
+    { excludeTests: options.excludeTests === true },
   );
   const server = new McpServer(
     { name: "codeskope", version: SERVER_VERSION },

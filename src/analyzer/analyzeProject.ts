@@ -37,13 +37,21 @@ export interface ProjectAnalysis {
   readonly graph: CodeGraph;
   readonly diagnostics: readonly AnalysisDiagnostic[];
   readonly fileHashes: Readonly<Record<string, string>>;
+  /** Whether test files were left out; persisted so updates stay consistent. */
+  readonly excludeTests?: boolean;
+}
+
+export interface AnalyzeProjectOptions {
+  readonly excludeTests?: boolean;
 }
 
 export async function analyzeProject(
   rootDirectory: string,
+  options: AnalyzeProjectOptions = {},
 ): Promise<ProjectAnalysis> {
   const absoluteRoot = path.resolve(rootDirectory);
-  const relativeFiles = await discoverSourceFiles(absoluteRoot);
+  const excludeTests = options.excludeTests === true;
+  const relativeFiles = await discoverSourceFiles(absoluteRoot, { excludeTests });
   const rootNames = relativeFiles.map((file) => path.join(absoluteRoot, file));
   const fileHashes = await hashSourceFiles(absoluteRoot, relativeFiles);
   const compilerOptions = readCompilerOptions(absoluteRoot);
@@ -87,7 +95,7 @@ export async function analyzeProject(
     diagnostics,
   );
 
-  return { rootDirectory: absoluteRoot, graph, diagnostics, fileHashes };
+  return { rootDirectory: absoluteRoot, graph, diagnostics, fileHashes, excludeTests };
 }
 
 async function hashSourceFiles(

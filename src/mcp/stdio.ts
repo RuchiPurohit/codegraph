@@ -13,6 +13,7 @@ export async function runCodeGraphMcpServer(
   const server = createCodeGraphMcpServer({
     rootDirectory,
     ...(indexPath === undefined ? {} : { indexPath }),
+    excludeTests: arguments_.includes("--exclude-tests"),
   });
   const transport = new StdioServerTransport();
   await server.connect(transport);
